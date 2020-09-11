@@ -1,0 +1,10 @@
+第一步: 构建源码调试环境
+    dubbo源码官方地址: https://github.com/apache/dubbo
+        1、fork 官方dubbo仓库到自己的仓库
+        2、git clone git@github.com:[自己仓库名称]/dubbo.git
+        3、到当前clone的目录(含有pom.xml)中，执行mvn clean install -Dmaven.test.skip=true
+        4、将项目转换成idea项目 mvn idea:idea(如果需要失败可以利用 mvn idea:workspace)
+
+
+
+
