@@ -24,6 +24,9 @@ import org.apache.dubbo.demo.DemoService;
 
 import java.util.concurrent.CountDownLatch;
 
+/**
+ *  利用dubbo相关API 注册dubbo相关服务
+ */
 public class Application {
     public static void main(String[] args) throws Exception {
         if (isClassic(args)) {
@@ -38,11 +41,16 @@ public class Application {
     }
 
     private static void startWithBootstrap() {
+        // 创建一个DemoServiceImpl实例信息，泛型参数是业务接口实现类
         ServiceConfig<DemoServiceImpl> service = new ServiceConfig<>();
+        // 指定业务接口
         service.setInterface(DemoService.class);
+        // 指定业务具体实现类实例
         service.setRef(new DemoServiceImpl());
 
+        // 创建一个DubboBootstrap实例对象，这是一个单例对象，利用了单例模式实现
         DubboBootstrap bootstrap = DubboBootstrap.getInstance();
+        // 设置DubboBootstrap相关配置信息，包括ApplicationConfig，注册中心地址，ServiceConfig实例
         bootstrap.application(new ApplicationConfig("dubbo-demo-api-provider"))
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .service(service)

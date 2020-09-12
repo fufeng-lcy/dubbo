@@ -49,7 +49,7 @@ public abstract class ConfigCenterBasedMetadataReportFactory implements Metadata
     private static final String URL_PATH = MetadataReport.class.getName();
 
     // Registry Collection Map<metadataAddress, MetadataReport>
-    private static final Map<String, ConfigCenterBasedMetadataReport> metadataReportCache = new ConcurrentHashMap();
+    //private static final Map<String, ConfigCenterBasedMetadataReport> metadataReportCache = new ConcurrentHashMap<>();
 
     private final KeyTypeEnum keyType;
 
@@ -60,14 +60,14 @@ public abstract class ConfigCenterBasedMetadataReportFactory implements Metadata
         this.keyType = keyType;
     }
 
-    @Override
+    /*@Override
     public ConfigCenterBasedMetadataReport getMetadataReport(URL url) {
         url = url.setPath(URL_PATH);
         final URL actualURL = resolveURLParameters(url);
         String key = actualURL.toServiceString();
         // Lock the metadata access process to ensure a single instance of the metadata instance
         return metadataReportCache.computeIfAbsent(key, k -> new ConfigCenterBasedMetadataReport(actualURL, keyType));
-    }
+    }*/
 
     private URL resolveURLParameters(URL url) {
         URL resolvedURL = url.removeParameters(EXPORT_KEY, REFER_KEY);

@@ -80,7 +80,7 @@ public class GrizzlyServer extends AbstractServer {
         } else {
             throw new IllegalArgumentException("Unsupported threadpool type " + threadpool);
         }
-        builder.setWorkerThreadPoolConfig(config)
+        builder//.setWorkerThreadPoolConfig(config)
                 .setKeepAlive(true)
                 .setReuseAddress(false)
                 .setIOStrategy(SameThreadIOStrategy.getInstance());

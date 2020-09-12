@@ -18,6 +18,7 @@ package org.apache.dubbo.remoting.redis;
 
 import redis.clients.jedis.JedisPubSub;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,7 +31,7 @@ public interface RedisClient {
 
     boolean isConnected();
 
-    void destroy();
+    void destroy() throws IOException;
 
     Long hdel(final String key, final String... fields);
 
@@ -40,7 +41,7 @@ public interface RedisClient {
 
     void psubscribe(final JedisPubSub jedisPubSub, final String... patterns);
 
-    void disconnect();
+    void disconnect() throws IOException;
 
-    void close();
+    void close() throws IOException;
 }

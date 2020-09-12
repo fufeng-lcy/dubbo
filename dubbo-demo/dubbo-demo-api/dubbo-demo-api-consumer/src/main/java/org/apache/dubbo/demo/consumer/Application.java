@@ -38,17 +38,24 @@ public class Application {
     }
 
     private static void runWithBootstrap() {
+        // 获取一个ReferenceConfig对象，泛型类似是业务接口
         ReferenceConfig<DemoService> reference = new ReferenceConfig<>();
+        // 设置业务接口
         reference.setInterface(DemoService.class);
+        // 是否生成接口
         reference.setGeneric("true");
 
+        // 生成一个DubboBootstrap单例对象
         DubboBootstrap bootstrap = DubboBootstrap.getInstance();
+        // 设置ApplicationConfig实例、注册中心地址、引用配置对象
         bootstrap.application(new ApplicationConfig("dubbo-demo-api-consumer"))
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .reference(reference)
                 .start();
 
+        // 通过引用配置缓存中拿到缓存的引用代理业务实例
         DemoService demoService = ReferenceConfigCache.getCache().get(reference);
+        // 调用业务方法
         String message = demoService.sayHello("dubbo");
         System.out.println(message);
 

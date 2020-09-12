@@ -648,7 +648,7 @@ public class DubboBootstrap extends GenericEventListener {
             return;
         }
 
-        MetadataReportInstance.init(metadataReportConfig.toUrl());
+        MetadataReportInstance.init(metadataReportConfig);
     }
 
     /**
@@ -860,7 +860,8 @@ public class DubboBootstrap extends GenericEventListener {
      * Initialize {@link #metadataService WritableMetadataService} from {@link WritableMetadataService}'s extension
      */
     private void initMetadataService() {
-        this.metadataService = WritableMetadataService.getExtension(getMetadataType());
+        // this.metadataService = WritableMetadataService.getExtension(getMetadataType());
+        this.metadataService = WritableMetadataService.getDefaultExtension();
     }
 
     /**

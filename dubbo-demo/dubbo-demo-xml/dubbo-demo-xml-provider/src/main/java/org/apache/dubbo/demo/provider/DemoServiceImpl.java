@@ -27,6 +27,11 @@ import java.util.concurrent.CompletableFuture;
 public class DemoServiceImpl implements DemoService {
     private static final Logger logger = LoggerFactory.getLogger(DemoServiceImpl.class);
 
+    /**
+     *  同步调用 sayHello
+     * @param name 名称
+     * @return 欢迎语
+     */
     @Override
     public String sayHello(String name) {
         logger.info("Hello " + name + ", request from consumer: " + RpcContext.getContext().getRemoteAddress());
@@ -38,6 +43,11 @@ public class DemoServiceImpl implements DemoService {
         return "Hello " + name + ", response from provider: " + RpcContext.getContext().getLocalAddress();
     }
 
+    /**
+     *  一步调用
+     * @param name 名称
+     * @return 异步结果
+     */
     @Override
     public CompletableFuture<String> sayHelloAsync(String name) {
         CompletableFuture<String> cf = CompletableFuture.supplyAsync(() -> {

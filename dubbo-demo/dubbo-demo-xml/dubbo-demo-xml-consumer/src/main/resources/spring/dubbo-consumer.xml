@@ -21,15 +21,19 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
        http://dubbo.apache.org/schema/dubbo http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
 
+    <!-- 定义消费者应用名称 -->
     <dubbo:application name="demo-consumer">
+        <!-- 消费者元数据定义 -->
         <dubbo:parameter key="mapping-type" value="metadata"/>
         <dubbo:parameter key="enable-auto-migration" value="true"/>
     </dubbo:application>
 
     <!--    <dubbo:metadata-report address="zookeeper://127.0.0.1:2181"/>-->
 
+    <!-- 消费者zk注册中心 -->
     <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
 
+    <!-- 消费者应用远程服务，配置成spring bean -->
     <dubbo:reference provided-by="demo-provider" id="demoService" check="false"
                      interface="org.apache.dubbo.demo.DemoService"/>
 

@@ -28,6 +28,7 @@ import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPubSub;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -77,7 +78,7 @@ public class ClusterRedisClient extends AbstractRedisClient implements RedisClie
     }
 
     @Override
-    public void destroy() {
+    public void destroy() throws IOException {
         jedisCluster.close();
     }
 
@@ -109,12 +110,12 @@ public class ClusterRedisClient extends AbstractRedisClient implements RedisClie
     }
 
     @Override
-    public void disconnect() {
+    public void disconnect() throws IOException {
         jedisCluster.close();
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         jedisCluster.close();
     }
 

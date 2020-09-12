@@ -32,16 +32,16 @@ public class WhitelistHessian2FactoryInitializer extends AbstractHessian2Factory
         SerializerFactory serializerFactory = new Hessian2SerializerFactory();
         String whiteList = ConfigurationUtils.getProperty(WHITELIST);
         if ("true".equals(whiteList)) {
-            serializerFactory.getClassFactory().setWhitelist(true);
+            //serializerFactory.getClassFactory().setWhitelist(true);
             String allowPattern = ConfigurationUtils.getProperty(ALLOW);
             if (StringUtils.isNotEmpty(allowPattern)) {
-                serializerFactory.getClassFactory().allow(allowPattern);
+                //serializerFactory.getClassFactory().allow(allowPattern);
             }
         } else {
-            serializerFactory.getClassFactory().setWhitelist(false);
+            //serializerFactory.getClassFactory().setWhitelist(false);
             String denyPattern = ConfigurationUtils.getProperty(DENY);
             if (StringUtils.isNotEmpty(denyPattern)) {
-                serializerFactory.getClassFactory().deny(denyPattern);
+                //serializerFactory.getClassFactory().deny(denyPattern);
             }
         }
         return serializerFactory;
