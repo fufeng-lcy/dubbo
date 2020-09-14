@@ -1,0 +1,2 @@
+org.apache.dubbo.spi.log.impl.Log4j
+org.apache.dubbo.spi.log.impl.LogBack
