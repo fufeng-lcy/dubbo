@@ -56,6 +56,7 @@
         3、host/port：主机/端口。在实践中一般会使用域名，而不是使用具体的 host 和 port。
         4、path：请求的路径。
         5、parameters：参数键值对。一般在 GET 请求中会将参数放到 URL 中，POST 请求会将参数放到请求体中。
+
     Dubbo中的URL : dubbo://192.168.32.91:20880/org.apache.dubbo.demo.DemoService?anyhost=true&application=dubbo-demo-api-provider&dubbo=2.0.2&interface=org.apache.dubbo.demo.DemoService&methods=sayHello,sayHelloAsync&pid=32508&release=&side=provider&timestamp=1593253404714dubbo://172.17.32.91:20880/org.apache.dubbo.demo.DemoService?anyhost=true&application=dubbo-demo-api-provider&dubbo=2.0.2&interface=org.apache.dubbo.demo.DemoService&methods=sayHello,sayHelloAsync&pid=32508&release=&side=provider&timestamp=1593253404714
         这个 Demo Provider 注册到 ZooKeeper 上的 URL 信息，简单解析一下这个 URL 的各个部分：
         protocol：dubbo 协议。
@@ -63,10 +64,58 @@
         host/port：172.17.32.91:20880。
         path：org.apache.dubbo.demo.DemoService。
         parameters：参数键值对。
-  源码位置: org.apache.dubbo.common.URL.URL(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.String, java.util.Map<java.lang.String,java.lang.String>, java.util.Map<java.lang.String,java.util.Map<java.lang.String,java.lang.String>>)
-    在 dubbo-common 包中还提供了 URL 的辅助类：
-        URLBuilder: 辅助构造 URL。
-        URLStrParser: 将字符串解析成 URL 对象。
+
+    源码位置: org.apache.dubbo.common.URL.URL(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.String, java.util.Map<java.lang.String,java.lang.String>, java.util.Map<java.lang.String,java.util.Map<java.lang.String,java.lang.String>>)
+        在 dubbo-common 包中还提供了 URL 的辅助类：
+            URLBuilder: 辅助构造 URL。
+            URLStrParser: 将字符串解析成 URL 对象。
+
+    URL 在SPI中的应用
+        Dubbo SPI 中有一个依赖 URL 的重要场景——适配器方法，是被 @Adaptive 注解标注的， URL 一个很重要的作用就是与 @Adaptive 注解一起选择合适的扩展实现类。
+        例如: 在 dubbo-registry-api 模块中我们可以看到 RegistryFactory 这个接口，其中的 getRegistry() 方法上有 @Adaptive({"protocol"}) 注解，
+             说明这是一个适配器方法，Dubbo 在运行时会为其动态生成相应的 “$Adaptive” 类型，如下所示:
+             public class RegistryFactory$Adaptive
+                           implements RegistryFactory {
+                 public Registry getRegistry(org.apache.dubbo.common.URL arg0) {
+                     if (arg0 == null) throw new IllegalArgumentException("...");
+                     org.apache.dubbo.common.URL url = arg0;
+                     // 尝试获取URL的Protocol，如果Protocol为空，则使用默认值"dubbo"
+                     String extName = (url.getProtocol() == null ? "dubbo" :
+                          url.getProtocol());
+                     if (extName == null)
+                         throw new IllegalStateException("...");
+                     // 根据扩展名选择相应的扩展实现，Dubbo SPI的核心原理
+                     RegistryFactory extension = (RegistryFactory) ExtensionLoader
+                       .getExtensionLoader(RegistryFactory.class)
+                             .getExtension(extName);
+                     return extension.getRegistry(arg0);
+                 }
+             }
+        我们会看到，在生成的 RegistryFactory$Adaptive 类中会自动实现 getRegistry() 方法，其中会根据 URL 的 Protocol 确定扩展名称，从而确定使用的具体扩展实现类。
+        我们可以找到 RegistryProtocol 这个类，并在其 getRegistry() 方法中打一个断点， Debug 启动Demo 示例中的 Provider，得到如下图所示的内容：
+            传入的值是URL中的registryUrl : service-discovery-registry://127.0.0.1:2181/org.apache.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.2&export=dubbo%3A%2F%2F192.168.0.91%3A20880%2Forg.apache.dubbo.demo.GreetingService%3Fanyhost%3Dtrue%26application%3Ddemo-provider%26bind.ip%3D192.168.0.91%26bind.port%3D20880%26deprecated%3Dfalse%26dubbo%3D2.0.2%26dynamic%3Dtrue%26generic%3Dfalse%26group%3Dgreeting%26interface%3Dorg.apache.dubbo.demo.GreetingService%26mapping-type%3Dmetadata%26mapping.type%3Dmetadata%26metadata-type%3Dremote%26methods%3Dhello%26pid%3D2417%26qos.port%3D22222%26release%3D%26revision%3D1.0.0%26side%3Dprovider%26timeout%3D5000%26timestamp%3D1600050456247%26version%3D1.0.0&id=registry1&mapping-type=metadata&mapping.type=metadata&pid=2417&qos.port=22222&registry=zookeeper&registry-type=service&timestamp=1600050456218
+            通过URL获取的Registry中的registryUrl : zookeeper://127.0.0.1:2181/org.apache.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.2&id=registry1&interface=org.apache.dubbo.registry.RegistryService&mapping-type=metadata&mapping.type=metadata&pid=2417&qos.port=22222&registry-type=service&timestamp=1600050456218
+
+    URL 在服务暴露中的应用
+        Provider 在启动时，会将自身暴露的服务注册到 ZooKeeper 上，具体是注册哪些信息到 ZooKeeper 上呢？
+        来看 ZookeeperRegistry.doRegister() 方法，在其中打个断点，然后 Debug 启动 Provider:
+            url : dubbo://192.168.0.91:20880/org.apache.dubbo.demo.DemoService?anyhost=true&application=dubbo-demo-annotation-provider&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.apache.dubbo.demo.DemoService&methods=sayHello,sayHelloAsync&pid=2579&release=&side=provider&timestamp=1600051163018
+            toUrlPath(url) : /dubbo/org.apache.dubbo.demo.DemoService/providers/dubbo%3A%2F%2F192.168.0.91%3A20880%2Forg.apache.dubbo.demo.DemoService%3Fanyhost%3Dtrue%26application%3Ddubbo-demo-annotation-provider%26deprecated%3Dfalse%26dubbo%3D2.0.2%26dynamic%3Dtrue%26generic%3Dfalse%26interface%3Dorg.apache.dubbo.demo.DemoService%26methods%3DsayHello%2CsayHelloAsync%26pid%3D2579%26release%3D%26side%3Dprovider%26timestamp%3D1600051163018
+        传入的 URL 中包含了 Provider 的地址（192.168.0.91:20880）、暴露的接口（org.apache.dubbo.demo.DemoService）等信息， toUrlPath() 方法会根据传入的 URL 参数确定在 ZooKeeper 上创建的节点路径，还会通过 URL 中的 dynamic 参数值确定创建的 ZNode 是临时节点还是持久节点。
+
+    URl 在服务订阅中的应用
+        Consumer 启动后会向注册中心进行订阅操作，并监听自己关注的 Provider。那 Consumer 是如何告诉注册中心自己关注哪些 Provider 呢？
+        我们来看 ZookeeperRegistry 这个实现类，它是由上面的 ZookeeperRegistryFactory 工厂类创建的 Registry 接口实现，
+        其中的 doSubscribe() 方法是订阅操作的核心实现，在方法里面打一个断点，并 Debug 启动 Demo 中 Consumer，会得到下图所示的内容：
+            传入的url : consumer://192.168.0.91/org.apache.dubbo.demo.DemoService?application=dubbo-demo-annotation-consumer&category=providers,configurators,routers&dubbo=2.0.2&id=org.apache.dubbo.config.RegistryConfig#0&init=false&interface=org.apache.dubbo.demo.DemoService&methods=sayHello,sayHelloAsync&pid=2654&side=consumer&sticky=false&timestamp=1600051729106
+            其中 Protocol 为 consumer ，表示是 Consumer 的订阅协议，其中的 category 参数表示要订阅的分类，这里要订阅 providers、configurators 以及 routers 三个分类；interface 参数表示订阅哪个服务接口，这里要订阅的是暴露 org.apache.dubbo.demo.DemoService 实现的 Provider。
+            toCategoriesPath(url) : 0 = "/dubbo/org.apache.dubbo.demo.DemoService/providers"
+                                    1 = "/dubbo/org.apache.dubbo.demo.DemoService/configurators"
+                                    2 = "/dubbo/org.apache.dubbo.demo.DemoService/routers"
+
+
+
+
 
 
 
