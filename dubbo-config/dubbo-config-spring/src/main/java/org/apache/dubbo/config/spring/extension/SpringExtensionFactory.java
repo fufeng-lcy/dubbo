@@ -61,11 +61,13 @@ public class SpringExtensionFactory implements ExtensionFactory {
     public <T> T getExtension(Class<T> type, String name) {
 
         //SPI should be get from SpiExtensionFactory
+        // type必须是@SPI注解标注的
         if (type.isInterface() && type.isAnnotationPresent(SPI.class)) {
             return null;
         }
 
         for (ApplicationContext context : CONTEXTS) {
+            // 从spring上下文中查询Bean
             T bean = BeanFactoryUtils.getOptionalBean(context, name, type);
             if (bean != null) {
                 return bean;
