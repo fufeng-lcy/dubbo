@@ -163,6 +163,7 @@
         3、META-INF/dubbo/internal/ 目录：该目录用于存放 Dubbo 内部使用的 SPI 配置文件。
       Dubbo 将 SPI 配置文件改成了 KV 格式
         K : 扩展名称
+        V : 扩展实现
 
     Dubbo @SPI 注解
         dubbo 中某个接口被标注了@SPI，就说明这个接口是一个扩展接口，如: org.apache.dubbo.rpc.Protocol。
@@ -179,7 +180,7 @@
                     该集合缓存了全部 ExtensionLoader 实例，其中的 Key 为扩展接口，Value 为加载其扩展实现的 ExtensionLoader 实例。
                 3、EXTENSION_INSTANCES（ConcurrentMap<Class<?>, Object>类型）：该集合缓存了扩展实现类与其实例对象的映射关系。
                     如: Key 为 Class，Value 为 DubboProtocol 对象。
-            ExtensionLoader 中三个核心的其他字段:
+            ExtensionLoader 中的其他字段:
                 1、type（Class<?>类型）：当前 ExtensionLoader 实例负责加载扩展接口。
                 2、cachedDefaultName（String类型）：记录了 type 这个扩展接口上 @SPI 注解的 value 值，也就是默认扩展名。
                 3、cachedNames（ConcurrentMap<Class<?>, String>类型）：缓存了该 ExtensionLoader 加载的扩展实现类与扩展名之间的映射关系。
@@ -256,7 +257,7 @@
             injectExtension() 方法实现的自动装配依赖了 ExtensionFactory（即 objectFactory 字段），
             ExtensionFactory 有 SpringExtensionFactory 和 SpiExtensionFactory 两个真正的实现（还有一个实现是 AdaptiveExtensionFactory 是适配器）。
             1、SpringExtensionFactory: 将属性名称作为 Spring Bean 的名称，从 Spring 容器中获取 Bean
-            2、SpiExtensionFactory: 根据扩展接口获取相应的适配器，没有到属性名称
+            2、SpiExtensionFactory: 根据扩展接口获取相应的适配器，没有用到属性名称
 
 
      @Activate注解与自动激活特性
@@ -288,6 +289,68 @@
             得到默认激活的扩展实实现集合中有 [ filter4, filter6 ]；
             排序后为 [ filter6, filter4 ]；
             按序添加自定义扩展实例之后得到 [ filter3, filter6, filter4, filter1 ]。
+
+6、Dubbo中的定时任务
+        JDK 提供的 java.util.Timer 和 DelayedQueue 等工具类，可以帮助我们实现简单的定时任务管理，其底层实现使用的是堆这种数据结构，存取操作的复杂度都是 O(nlog(n))，
+    无法支持大量的定时任务。在定时任务量比较大、性能要求比较高的场景中，为了将定时任务的存取操作以及取消操作的时间复杂度降为 O(1)，一般会使用时间轮的方式。
+
+    时间轮是一种高效的、批量管理定时任务的调度模型。
+        时间轮一般会实现成一个环形结构，类似一个时钟，分为很多槽，一个槽代表一个时间间隔，每个槽使用双向链表存储定时任务；
+        指针周期性地跳动，跳动到一个槽位，就执行该槽位的定时任务。
+
+    需要注意的是，单层时间轮的容量和精度都是有限的，对于精度要求特别高、时间跨度特别大或是海量定时任务需要调度的场景，通常会使用多级时间轮以及持久化存储与时间轮结合的方案。
+
+    dubbo实现timer位置: dubbo-common 模块的 org.apache.dubbo.common.timer 包
+        核心接口:
+            1、org.apache.dubbo.common.timer.Timer
+            2、org.apache.dubbo.common.timer.TimerTask
+            3、org.apache.dubbo.common.timer.Timeout
+        具体实现类:
+            HashedWheelTimer
+        分析时间轮指针一次转动的全流程(HashedWheelTimer$Worker.run()):
+            1、时间轮指针转动，时间轮周期开始。
+            2、清理用户主动取消的定时任务，这些定时任务在用户取消时，会记录到 cancelledTimeouts 队列中。在每次指针转动的时候，时间轮都会清理该队列。
+            3、将缓存在 timeouts 队列中的定时任务转移到时间轮中对应的槽中。
+            4、根据当前指针定位对应槽，处理该槽位的双向链表中的定时任务。
+            5、检测时间轮的状态。如果时间轮处于运行状态，则循环执行上述步骤，不断执行定时任务。
+                如果时间轮处于停止状态，则执行下面的步骤获取到未被执行的定时任务并加入 unprocessedTimeouts 队列：遍历时间轮中每个槽位，
+                并调用 clearTimeouts() 方法；对 timeouts 队列中未被加入槽中循环调用 poll()。
+            6、最后再次清理 cancelledTimeouts 队列中用户主动取消的定时任务。
+
+    dubbo中如何使用定时任务?
+            在 Dubbo 中，时间轮并不直接用于周期性操作，而是只向时间轮提交执行单次的定时任务，在上一次任务执行完成的时候，调用 newTimeout() 方法再次提交当前任务，
+        这样就会在下个周期执行该任务。即使在任务执行过程中出现了 GC、I/O 阻塞等情况，导致任务延迟或卡住，也不会有同样的任务源源不断地提交进来，导致任务堆积。
+        Dubbo 中对时间轮的应用主要体现在如下两个方面：
+            1、失败重试， 例如，Provider 向注册中心进行注册失败时的重试操作，或是 Consumer 向注册中心订阅时的失败重试等。
+            2、周期性定时任务， 例如，定期发送心跳请求，请求超时的处理，或是网络连接断开后的重连机制。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
