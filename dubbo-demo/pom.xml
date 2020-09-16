@@ -37,6 +37,7 @@
         <module>dubbo-demo-api</module>
         <module>spi</module>
         <module>zk-curator</module>
+        <module>proxy</module>
     </modules>
 
     <dependencyManagement>

@@ -334,7 +334,63 @@
 
     Apache Curator 是 Apache 基金会提供的一款 ZooKeeper 客户端，它提供了一套易用性和可读性非常强的 Fluent 风格的客户端 API ，可以帮助我们快速搭建稳定可靠的 ZooKeeper 客户端程序。
 
+8、动态代理机制 示例代码(dubbo-demo/proxy)
+    动态代理机制在 Java 中有着广泛的应用，例如，Spring AOP、MyBatis、Hibernate 等常用的开源框架，都使用到了动态代理机制。
+    当然，Dubbo 中也使用到了动态代理，在开发简易版 RPC 框架的时候，可以参考 Dubbo 使用动态代理机制来屏蔽底层的网络传输以及服务发现的相关实现。
 
+    代理模式: 是23种设计模式种常用的
+
+    静态代理
+        interface Subject [method operation()]
+                            -> class RealSubject
+                            -> class Proxy [ hold(RealSubject) ]
+        Subject 是程序中的业务逻辑接口，RealSubject 是实现了 Subject 接口的真正业务类，Proxy 是实现了 Subject 接口的代理类，
+        封装了一个 RealSubject 引用。在程序中不会直接调用 RealSubject 对象的方法，而是使用 Proxy 对象实现相关功能。
+
+        Proxy.operation() 方法的实现会调用其中封装的 RealSubject 对象的 operation() 方法，执行真正的业务逻辑。
+        代理的作用不仅仅是正常地完成业务逻辑，还会在业务逻辑前后添加一些代理逻辑，也就是说，
+        Proxy.operation() 方法会在 RealSubject.operation() 方法调用前后进行一些预处理以及一些后置处理。这就是我们常说的“代理模式”。
+
+        使用代理模式可以控制程序对 RealSubject 对象的访问，如果发现异常的访问，可以直接限流或是返回，
+        也可以在执行业务处理的前后进行相关的预处理和后置处理，帮助上层调用方屏蔽底层的细节。
+        例如，在 RPC 框架中，代理可以完成序列化、网络 I/O 操作、负载均衡、故障恢复以及服务发现等一系列操作，而上层调用方只感知到了一次本地调用。
+
+        代理模式还可以用于实现延迟加载的功能。我们知道查询数据库是一个耗时的操作，而有些时候查询到的数据也并没有真正被程序使用。
+        延迟加载功能就可以有效地避免这种浪费，系统访问数据库时，首先可以得到一个代理对象，此时并没有执行任何数据库查询操作，代理对象中自然也没有真正的数据；
+        当系统真正需要使用数据时，再调用代理对象完成数据库查询并返回数据。常见 ORM 框架（例如，MyBatis、 Hibernate）中的延迟加载的原理大致也是如此。
+
+
+    JDK动态代理
+        核心类执行流程:
+            1、java.lang.reflect.InvocationHandler 代理类拦截处理器
+            2、java.lang.reflect.Proxy
+                -> java.lang.reflect.Proxy.newProxyInstance 创建proxy实例
+                    -> java.lang.reflect.Proxy.getProxyClass0 通过WeakCache获取proxy class
+                        -> java.lang.reflect.WeakCache.get 先通过缓存拿class subKeyFactory.apply(key, parameter);
+                            -> java.lang.reflect.Proxy.ProxyClassFactory.apply 创建真正的class文件和instance
+                                -> sun.misc.ProxyGenerator.generateProxyClass
+                                    需要添加JVM参数信息 -Dsun.misc.ProxyGenerator.saveGeneratedFiles=true将生成的代理clss输出到磁盘
+                                    具体输出的位置是 当前Project/com/sun/proxy/$Proxy0.class
+        原理: JDK 动态代理的实现原理是动态创建代理类并通过指定类加载器进行加载，在创建代理对象时将InvocationHandler对象作为构造参数传入。
+             当调用代理对象时，会调用 InvocationHandler.invoke() 方法，从而执行代理逻辑，并最终调用真正业务对象的相应方法。
+
+    CGlib动态代理
+        CGLib（Code Generation Library）是一个基于 ASM 的字节码生成库，它允许我们在运行时对字节码进行修改和动态生成。
+        CGLib 采用字节码技术实现动态代理功能，其底层原理是通过字节码技术为目标类生成一个子类，并在该子类中采用方法拦截的方式拦截所有父类方法的调用，从而实现代理的功能。
+
+        因为 CGLib 使用生成子类的方式实现动态代理，所以无法代理 final 关键字修饰的方法（因为final 方法是不能够被重写的）。
+        这样的话，CGLib 与 JDK 动态代理之间可以相互补充：在目标类实现接口时，使用 JDK 动态代理创建代理对象；
+        当目标类没有实现接口时，使用 CGLib 实现动态代理的功能。在 Spring、MyBatis 等多种开源框架中，都可以看到JDK动态代理与 CGLib 结合使用的场景。
+
+        CGLib 的实现有两个重要的成员组成:
+            1、Enhancer：指定要代理的目标对象以及实际处理代理逻辑的对象，最终通过调用 create() 方法得到代理对象，对这个对象所有的非 final 方法的调用都会转发给 MethodInterceptor 进行处理。
+            2、MethodInterceptor：动态代理对象的方法调用都会转发到intercept方法进行增强。
+
+    Javassist
+        Javassist 是一个开源的生成 Java 字节码的类库，其主要优点在于简单、快速，直接使用Javassist 提供的 Java API 就能动态修改类的结构，或是动态生成类。
+        Javassist 也可以实现动态代理功能，底层的原理也是通过创建目标类的子类的方式实现的(dubbo-demo/proxy/src/main/java/org/apche/dubbo/javassist)。
+
+    Javassist 的性能也比较好，是 Dubbo 默认的代理生成方式。
 
 
 
