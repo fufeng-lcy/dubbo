@@ -1,0 +1,93 @@
+curator-x-discovery 扩展库
+        为了避免 curator-framework 包过于膨胀，Curator 将很多其他解决方案都拆出来了，作为单独的一个包，
+    例如：curator-recipes、curator-x-discovery、curator-x-rpc 等。
+
+    使用 curator-x-discovery 来完成一个简易 RPC 框架的注册中心模块。
+    curator-x-discovery 扩展包是一个服务发现的解决方案。
+    在 ZooKeeper 中，我们可以使用临时节点实现一个服务注册机制。
+    当服务启动后在 ZooKeeper 的指定 Path 下创建临时节点，服务断掉与 ZooKeeper 的会话之后，其相应的临时节点就会被删除。
+    这个 curator-x-discovery 扩展包抽象了这种功能，并提供了一套简单的 API 来实现服务发现机制。
+
+    curator-x-discovery 扩展包的核心概念如下：
+        1、ServiceInstance: 这是 curator-x-discovery 扩展包对服务实例的抽象，由 name、id、address、port 以及一个可选的 payload 属性构成。
+        2、ServiceProvider: 这是 curator-x-discovery 扩展包的核心组件之一，提供了多种不同策略的服务发现方式，具体策略有轮询调度、随机和黏性（总是选择相同的一个）。
+                    得到 ServiceProvider 对象之后，我们可以调用其 getInstance() 方法，按照指定策略获取 ServiceInstance 对象（即发现可用服务实例）；
+                    还可以调用 getAllInstances() 方法，获取所有 ServiceInstance 对象（即获取全部可用服务实例）。
+        3、ServiceDiscovery: 这是 curator-x-discovery 扩展包的入口类。开始必须调用 start() 方法，当使用完成应该调用 close() 方法进行销毁。
+        4、ServiceCache: 如果程序中会频繁地查询 ServiceInstance 对象，我们可以添加 ServiceCache 缓存，ServiceCache 会在内存中缓存 ServiceInstance 实例的列表，
+            并且添加相应的 Watcher 来同步更新缓存。查询 ServiceCache 的方式也是 getInstances() 方法。另外，ServiceCache 上还可以添加 Listener 来监听缓存变化。
+            public class ZookeeperCoordinator {
+              private ServiceDiscovery<ServerInfo> serviceDiscovery;
+              private ServiceCache<ServerInfo> serviceCache;
+              private CuratorFramework client;
+              private String root;
+                // 这里的JsonInstanceSerializer是将ServerInfo序列化成Json
+              private InstanceSerializer serializer =
+                    new JsonInstanceSerializer<>(ServerInfo.class);
+              ZookeeperCoordinator(Config config) throws Exception {
+                this.root = config.getPath();
+                // 创建Curator客户端
+                client = CuratorFrameworkFactory.newClient(
+                        config.getHostPort(),  new ExponentialBackoffRetry(...));
+                    client.start(); // 启动Curator客户端
+                    client.blockUntilConnected(); // 阻塞当前线程，等待连接成功
+                // 创建ServiceDiscovery
+                serviceDiscovery = ServiceDiscoveryBuilder
+                            .builder(ServerInfo.class)
+                    .client(client) // 依赖Curator客户端
+                    .basePath(root) // 管理的Zk路径
+                    .watchInstances(true) // 当ServiceInstance加载
+                    .serializer(serializer)
+                    .build();
+                serviceDiscovery.start(); // 启动ServiceDiscovery
+                // 创建ServiceCache，监Zookeeper相应节点的变化，也方便后续的读取
+                serviceCache = serviceDiscovery.serviceCacheBuilder()
+                    .name(root)
+                    .build();
+                serviceCache.start(); // 启动ServiceCache
+              }
+              public void registerRemote(ServerInfo serverInfo)throws Exception{
+                // 将ServerInfo对象转换成ServiceInstance对象
+                 ServiceInstance<ServerInfo> thisInstance =
+                        ServiceInstance.<ServerInfo>builder()
+                      .name(root)
+                      .id(UUID.randomUUID().toString())// 随机生成的UUID
+                      .address(serverInfo.getHost()) // host
+                      .port(serverInfo.getPort()) // port
+                      .payload(serverInfo) // payload
+                      .build();
+                // 将ServiceInstance写入到Zookeeper中
+                serviceDiscovery.registerService(thisInstance);
+              }
+
+              public List<ServerInfo> queryRemoteNodes() {
+                List<ServerInfo> ServerInfoDetails = new ArrayList<>();
+                // 查询 ServiceCache 获取全部的 ServiceInstance 对象
+                List<ServiceInstance<ServerInfo>> serviceInstances =
+                        serviceCache.getInstances();
+                serviceInstances.forEach(serviceInstance -> {
+                  // 从每个ServiceInstance对象的playload字段中反序列化得
+                 // 到ServerInfo实例
+                  ServerInfo instance = serviceInstance.getPayload();
+                  ServerInfoDetails.add(instance);
+                });
+                return ServerInfoDetails;
+              }
+            }
+
+    curator-recipes: Recipes 是 Curator 对常见分布式场景的解决方案。
+        1、Queues：提供了多种的分布式队列解决方法，比如：权重队列、延迟队列等。
+               在生产环境中，很少将 ZooKeeper 用作分布式队列，只适合在压力非常小的情况下，才使用该解决方案，所以要适度使用。
+
+        2、Counters：全局计数器是分布式系统中很常用的工具，
+                curator-recipes 提供了 SharedCount、DistributedAtomicLong 等组件，帮助开发人员实现分布式计数器功能。
+
+        3、Locks：java.util.concurrent.locks 中提供的各种锁相信你已经有所了解了，
+                在微服务架构中，分布式锁也是一项非常基础的服务组件，curator-recipes 提供了多种基于 ZooKeeper 实现的分布式锁，满足日常工作中对分布式锁的需求。
+
+        4、Barries：curator-recipes 提供的分布式栅栏可以实现多个服务之间协同工作，具体实现有 DistributedBarrier 和 DistributedDoubleBarrier。
+
+        5、Elections：实现的主要功能是在多个参与者中选举出 Leader，然后由 Leader 节点作为操作调度、任务监控或是队列消费的执行者。
+                curator-recipes 给出的实现是 LeaderLatch
+    
+
