@@ -727,6 +727,118 @@
              Netty 还提供了延迟释放的功能，来提升并发性能。当内存释放时，PoolArena 并没有马上释放，而是先尝试将该内存关联的 PoolChunk 和 Chunk 中的偏移位置等信息存入 ThreadLocal 的固定大小缓存队列中，
              如果该缓存队列满了，则马上释放内存。当有新的分配请求时，PoolArena 会优先访问线程本地的缓存队列，查询是否有缓存可用，如果有，则直接分配，提高分配效率。
 
+10、自定义一个RPC(dubbo-demo/simple-rpc)
+    RPC 框架的基石部分——远程调用，简易版 RPC 框架一次远程调用的核心流程是这样的：
+        1、Client 首先会调用本地的代理，也就是 Proxy。
+
+        2、Client 端 Proxy 会按照协议（Protocol），将调用中传入的数据序列化成字节流。
+
+        3、之后 Client 会通过网络，将字节数据发送到 Server 端。
+
+        4、Server 端接收到字节数据之后，会按照协议进行反序列化，得到相应的请求信息。
+
+        5、Server 端 Proxy 会根据序列化后的请求信息，调用相应的业务逻辑。
+
+        6、Server 端业务逻辑的返回值，也会按照上述逻辑返回给 Client 端。
+
+    包文件功能:
+        1、protocol：简易版 RPC 框架的自定义协议。
+
+        2、serialization：提供了自定义协议对应的序列化、反序列化的相关工具类。
+
+        3、codec：提供了自定义协议对应的编码器和解码器。
+
+        4、transport：基于 Netty 提供了底层网络通信的功能，其中会使用到 codec 包中定义编码器和解码器，以及 serialization 包中的序列化器和反序列化器。
+
+        5、registry：基于 ZooKeeper 和 Curator 实现了简易版本的注册中心功能。
+
+        6、proxy：使用 JDK 动态代理实现了一层代理。
+
+    自定义协议
+        当前已经有很多成熟的协议了，例如 HTTP、HTTPS 等，那为什么我们还要自定义 RPC 协议呢？
+
+        从功能角度考虑，HTTP 协议在 1.X 时代，只支持半双工传输模式，虽然支持长连接，但是不支持服务端主动推送数据。
+        从效率角度来看，在一次简单的远程调用中，只需要传递方法名和加个简单的参数，此时，HTTP 请求中大部分数据都被 HTTP Header 占据，真正的有效负载非常少，效率就比较低。
+
+        当然，HTTP 协议也有自己的优势，例如，天然穿透防火墙，大量的框架和开源软件支持 HTTP 接口，
+        而且配合 REST 规范使用也是很便捷的，所以有很多 RPC 框架直接使用 HTTP 协议，
+        尤其是在 HTTP 2.0 之后，如 gRPC、Spring Cloud 等。
+
+        协议帧如下:
+         short        byte                            byte                      long               int             n - byte
+         magic       version                        extraInfo                 messageId            size           message body
+         魔数         版本号         0         1～2       3～4      5～6
+                                消息类型    序列化方式   压缩方式    请求类型        消息ID              消息长度          消息体内容
+                              (请求/响应)                     (正常请求/心跳请求)
+        在 simple-RPC 的消息头中，包含了整个 RPC 消息的一些控制信息，例如，版本号、魔数、消息类型、附加信息、消息 ID 以及消息体的长度，
+        在附加信息（extraInfo）中，按位进行划分，分别定义消息的类型、序列化方式、压缩方式以及请求类型。当然，也可以自己扩充 simple-RPC 协议，实现更加复杂的功能。
+
+        消息帧定义:
+            public class Header {
+                 private short magic; // 魔数
+                 private byte version; // 协议版本
+                 private byte extraInfo; // 附加信息
+                 private Long messageId; // 消息ID
+                 private Integer size; // 消息体长度
+                 ... // 省略getter/setter方法
+            }
+
+        请求消息和响应消息定义:
+            public class Request implements Serializable {
+                 private String serviceName; // 请求的Service类名
+                 private String methodName; // 请求的方法名称
+                 private Class[] argTypes; // 请求方法的参数类型
+                 private Object[] args; // 请求方法的参数
+                    ... // 省略getter/setter方法
+            }
+            public class Response implements Serializable {
+                 private int code = 0; // 响应的错误码，正常响应为0，非0表示异常响应
+                 private String errMsg; // 异常信息
+                 private Object result; // 响应结果
+                 ... // 省略getter/setter方法
+            }
+
+    序列化实现
+        Request 和 Response 对象是要进行序列化的，需要实现 Serializable 接口。
+        为了让这两个类的对象能够在 Client 和 Server 之间跨进程传输，需要进行序列化和反序列化操作，这里定义一个 Serialization 接口，统一完成序列化相关的操作。
+        定义序列化接口
+            public interface Serialization {
+                 <T> byte[] serialize(T obj)throws IOException;
+                 <T> T deSerialize(byte[] data, Class<T> clz)throws IOException;
+            }
+        可以自定义实现各种序列化协议
+
+        在有的场景中，请求或响应传输的数据比较大，直接传输比较消耗带宽，所以一般会采用压缩后再发送的方式。
+        simple-RPC 消息头中的 extraInfo 字段中，就包含了标识消息体压缩方式的 bit 位。
+        这里我们定义一个 Compressor 接口抽象所有压缩算法。
+            public interface Compressor {
+                 byte[] compress(byte[] array) throws IOException;
+                 byte[] unCompress(byte[] array) throws IOException;
+            }
+
+    编解码实现
+
+         Netty 核心概念是Netty 每个 Channel 绑定一个 ChannelPipeline，并依赖 ChannelPipeline 中添加的 ChannelHandler 处理接收到（或要发送）的数据，其中就包括字节到消息（以及消息到字节）的转换。
+         Netty 中提供了 ByteToMessageDecoder、 MessageToByteEncoder、MessageToMessageEncoder、MessageToMessageDecoder 等抽象类来实现 Message 与 ByteBuf 之间的转换以及 Message 之间的转换。
+
+         可以看到对很多已有协议的序列化和反序列化都是基于上述抽象类实现的，
+         例如，HttpServerCodec 中通过依赖 HttpServerRequestDecoder 和 HttpServerResponseEncoder 来实现 HTTP 请求的解码和 HTTP 响应的编码。
+         HttpServerRequestDecoder 继承自 ByteToMessageDecoder，实现了 ByteBuf 到 HTTP 请求之间的转换；
+         HttpServerResponseEncoder 继承自 MessageToMessageEncoder，实现 HTTP 响应到其他消息的转换（其中包括转换成 ByteBuf 的能力）。
+
+         本例中使用ByteToMessageDecoder、MessageToMessageEncoder
+         request :  byte -> message
+         response : message -> message
+
+
+
+
+
+
+
+
+
+
 
 
 

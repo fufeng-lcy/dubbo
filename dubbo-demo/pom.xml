@@ -38,6 +38,7 @@
         <module>spi</module>
         <module>zk-curator</module>
         <module>proxy</module>
+        <module>simple-rpc</module>
     </modules>
 
     <dependencyManagement>
