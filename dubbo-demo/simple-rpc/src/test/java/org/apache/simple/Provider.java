@@ -18,7 +18,6 @@
 package org.apache.simple;
 
 import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.simple.bean.BeanManager;
 import org.apache.simple.bean.RpcBeanFactory;
 import org.apache.simple.registry.ServerInfo;
 import org.apache.simple.registry.ZookeeperRegistry;
