@@ -17,6 +17,8 @@
  */
 package org.apache.simple;
 
+import java.util.Map;
+
 /**
  * @program: dubbo-parent
  * @description: 消息接口
@@ -27,4 +29,7 @@ public interface UserService {
 
     String users(String userName);
 
+    int getAge(String name);
+
+    Map<String,Object> maps();
 }

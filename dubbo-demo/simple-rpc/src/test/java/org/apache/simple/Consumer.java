@@ -21,6 +21,8 @@ import org.apache.simple.proxy.RpcProxy;
 import org.apache.simple.registry.ServerInfo;
 import org.apache.simple.registry.ZookeeperRegistry;
 
+import java.util.Map;
+
 /**
  * @program: dubbo-parent
  * @description: 消费者
@@ -37,8 +39,12 @@ public class Consumer {
         // 创建代理对象，通过代理调用远端Server
         UserService userService = RpcProxy.newInstance(UserService.class, discovery);
         // 调用sayHello()方法，并输出结果
-        String result = userService.users("fufeng");
+        final String result = userService.users("fufeng");
         System.out.println(result);
+        final int age = userService.getAge("fufeng");
+        System.out.println(age);
+        final Map<String, Object> maps = userService.maps();
+        System.out.println(maps);
         Thread.sleep(5000L);
     }
 

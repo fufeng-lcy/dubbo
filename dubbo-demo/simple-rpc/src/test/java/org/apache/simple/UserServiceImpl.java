@@ -17,6 +17,9 @@
  */
 package org.apache.simple;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @program: dubbo-parent
  * @description: 用户服务实现
@@ -27,8 +30,21 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public String users(String userName) {
-        System.out.println(userName);
+        System.out.println("users ->"+userName);
         return System.currentTimeMillis()+":"+userName;
     }
 
+    @Override
+    public int getAge(String name) {
+        System.out.println("getAge ->"+name);
+        return 18;
+    }
+
+    @Override
+    public Map<String, Object> maps() {
+        Map<String,Object> map = new HashMap<>();
+        map.put("k8s","kubernetes");
+        map.put("cncf","cloud native");
+        return map;
+    }
 }

@@ -44,12 +44,12 @@ public class Provider {
         ZookeeperRegistry<ServerInfo> discovery =
                 new ZookeeperRegistry<>();
         discovery.start();
-        ServerInfo serverInfo = new ServerInfo("127.0.0.1", 20880);
+        ServerInfo serverInfo = new ServerInfo("127.0.0.1", 20881);
         discovery.registerService(
                 ServiceInstance.<ServerInfo>builder().name(UserService.class.getName())
                         .payload(serverInfo).build());
         // 启动RpcServer，等待Client的请求
-        RpcServer rpcServer = new RpcServer(20880);
+        RpcServer rpcServer = new RpcServer(20881);
         rpcServer.start();
         Thread.sleep(10000000L);
     }
