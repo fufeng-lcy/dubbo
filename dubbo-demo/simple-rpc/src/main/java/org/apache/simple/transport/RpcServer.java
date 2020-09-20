@@ -26,7 +26,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.simple.codec.RpcMessageDecoder;
 import org.apache.simple.codec.RpcMessageEncoder;
-import org.apache.simple.codec.RpcServerHandler;
+import org.apache.simple.constants.RpcConstant;
 
 
 /**
@@ -68,15 +68,14 @@ public class RpcServer {
         // workerGroup 是按照中的线程数是按照 CPU 核数计算得到的，
         bossGroup = NettyEventLoopFactory.eventLoopGroup(1, "boos");
         workerGroup = NettyEventLoopFactory.eventLoopGroup(
-                Math.min(Runtime.getRuntime().availableProcessors() + 1,
-                        32), "worker");
+                RpcConstant.DEFAULT_IO_THREADS, "worker");
         serverBootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_REUSEADDR, Boolean.TRUE)
                 .childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                .handler(new LoggingHandler(LogLevel.INFO))
+                .handler(new LoggingHandler(LogLevel.DEBUG))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {

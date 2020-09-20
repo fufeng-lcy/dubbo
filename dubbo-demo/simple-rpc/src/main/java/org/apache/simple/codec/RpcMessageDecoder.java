@@ -25,6 +25,7 @@ import org.apache.simple.compress.CompressorFactory;
 import org.apache.simple.constants.RpcConstant;
 import org.apache.simple.exception.MagicNumberMatchException;
 import org.apache.simple.protocol.Header;
+import org.apache.simple.protocol.Response;
 import org.apache.simple.serialization.Serialization;
 import org.apache.simple.serialization.SerializationFactory;
 import org.apache.simple.protocol.Message;
@@ -72,7 +73,7 @@ public class RpcMessageDecoder extends ByteToMessageDecoder {
         final int length = byteBuf.readInt();
 
         // 构建请求消息对象
-        Request request = null;
+        Object body = null;
         // 检查是不是心跳消息,心跳消息没有消息体，无需读取
         if (!CheckUtil.isHeartBeat(extraInfo)){
             // 对于非心跳消息，没有积累到足够的消息内容也无需读取
@@ -90,14 +91,21 @@ public class RpcMessageDecoder extends ByteToMessageDecoder {
                     SerializationFactory.get(extraInfo);
             final Compressor compressor =
                     CompressorFactory.get(extraInfo);
-            // 将消息体解码构建一个Request对象
-            request = serialization
-                    .deSerialize(compressor.unCompress(payload), Request.class);
+
+            if (CheckUtil.isRequest(extraInfo)) {
+                // 将消息体解码构建一个Request对象
+                body = serialization
+                        .deSerialize(compressor.unCompress(payload), Request.class);
+            }else {
+                // 将消息体解码构建一个Response对象
+                body = serialization
+                        .deSerialize(compressor.unCompress(payload), Response.class);
+            }
         }
         // 将上面的读取的数据封装成一个Head
         Header header = new Header(magic,version,extraInfo,msgId,length);
         // 构建一个message对象
-        Message<Request> message = new Message<>(header,request);
+        Message message = new Message(header,body);
 
         // 将消息添加到下一个处理handler
         list.add(message);

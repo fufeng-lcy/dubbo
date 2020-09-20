@@ -39,7 +39,7 @@ public class RpcMessageEncoder extends MessageToByteEncoder<Message<Response>> {
 
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext,
-                          Message<Response> message, ByteBuf byteBuf) throws Exception {
+                          Message message, ByteBuf byteBuf) throws Exception {
         final Header header = message.getHeader();
         // 按顺序依次写入header相关信息
         byteBuf.writeShort(header.getMagic());
@@ -54,7 +54,7 @@ public class RpcMessageEncoder extends MessageToByteEncoder<Message<Response>> {
         }
 
         // 获取消息体信息
-        final Response payload = message.getPayload();
+        final Object payload = message.getPayload();
 
         // 按照指定的序列化和压缩算法处理数据
         final Serialization serialization =

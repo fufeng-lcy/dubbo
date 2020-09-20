@@ -17,6 +17,8 @@
  */
 package org.apache.simple.bean;
 
+import java.util.Map;
+
 /**
  * @program: dubbo-parent
  * @description: 实现与Spring框架的集成
@@ -38,5 +40,10 @@ public class SpringBeanManager implements BeanManager{
     @Override
     public void registerSingleton(String serviceName, Object singleton) {
 
+    }
+
+    @Override
+    public Map<String, Object> getBeans() {
+        return null;
     }
 }

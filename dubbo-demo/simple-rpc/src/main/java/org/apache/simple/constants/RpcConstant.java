@@ -36,7 +36,7 @@ public interface RpcConstant {
     /**
      *  魔数
      */
-    short MAGIC = (short) 0xB0F1;
+    short MAGIC = (short) 0xE0F1;
 
     /**
      *  当前RPC 版本
@@ -51,7 +51,7 @@ public interface RpcConstant {
     /**
      *  默认超时时间 单位(ms)
      */
-    long DEFAULT_TIMEOUT = 500000;
+    long DEFAULT_TIMEOUT = 50000;
 
     /**
      *  连接超时

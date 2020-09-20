@@ -23,6 +23,7 @@ import org.apache.simple.constants.RpcConstant;
 import org.apache.simple.protocol.Header;
 import org.apache.simple.protocol.Message;
 import org.apache.simple.protocol.Request;
+import org.apache.simple.protocol.Response;
 import org.apache.simple.registry.Registry;
 import org.apache.simple.registry.ServerInfo;
 import org.apache.simple.transport.Connection;
@@ -34,6 +35,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.*;
 
 import static org.apache.simple.constants.RpcConstant.MAGIC;
@@ -57,6 +59,11 @@ public class RpcProxy implements InvocationHandler {
     public RpcProxy(String serviceName, Registry<ServerInfo> registry) {
         this.serviceName = serviceName;
         this.registry = registry;
+        try {
+            registry.addServiceCache(serviceName);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -73,6 +80,7 @@ public class RpcProxy implements InvocationHandler {
                 Thread.currentThread().getContextClassLoader(),
                 new Class[]{clazz},
                 new RpcProxy(clazz.getName(), registry)
+                //new RpcProxy("rcpService", registry)
         );
     }
 
@@ -97,14 +105,20 @@ public class RpcProxy implements InvocationHandler {
                 RpcConstant.VERSION,(byte)1,null,null);*/
         Header header = headerCache.computeIfAbsent(method, head -> new Header(MAGIC, VERSION));
         Message<Request> message = new Message<>(header,
-                new Request(serviceName, methodName, args));
-        return remoteCall(serverInfoServiceInstance.getPayload(), message);
+                new Request(serviceName, methodName, method.getParameterTypes(), args));
+        // 获取线程数据
+        Response response = remoteCall(serverInfoServiceInstance.getPayload(), message);
+        if (Objects.nonNull(response)){
+            return response.getResult();
+        }
+        return null;
     }
 
-    private Object remoteCall(ServerInfo serverInfo, Message<Request> message) throws InterruptedException, ExecutionException, TimeoutException {
+    private Response remoteCall(ServerInfo serverInfo, Message message) throws InterruptedException, ExecutionException, TimeoutException {
         if (serverInfo == null) {
             throw new RuntimeException("get available server error");
         }
+        System.out.println("client remote address -> "+serverInfo.getHost()+":"+serverInfo.getPort());
         // 创建DemoRpcClient连接指定的Server端
         RpcClient demoRpcClient = new RpcClient(
                 serverInfo.getHost(), serverInfo.getPort());
@@ -112,10 +126,11 @@ public class RpcProxy implements InvocationHandler {
                 .awaitUninterruptibly();
         // 创建对应的Connection对象，并发送请求
         Connection connection = new Connection(channelFuture, true);
-        NettyResponseFuture responseFuture =
+        NettyResponseFuture<Response> responseFuture =
                 connection.request(message, RpcConstant.DEFAULT_TIMEOUT);
         // 等待请求对应的响应
         return responseFuture.getPromise().get(
                 RpcConstant.DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS);
+
     }
 }

@@ -36,8 +36,9 @@ public class Provider {
     public static void main(String[] args) throws Exception {
         // 创建DemoServiceImpl，并注册到BeanManager中
         RpcServiceLoader.spi();
-        RpcBeanFactory.getBeanManager().registerSingleton("userService",
+        RpcBeanFactory.getBeanManager().registerSingleton(UserService.class.getName(),
                 new UserServiceImpl());
+
         // 创建ZookeeperRegistry，并将Provider的地址信息封装成ServerInfo
         // 对象注册到Zookeeper
         ZookeeperRegistry<ServerInfo> discovery =

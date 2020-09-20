@@ -39,7 +39,7 @@ public class Consumer {
         // 调用sayHello()方法，并输出结果
         String result = userService.users("fufeng");
         System.out.println(result);
-        Thread.sleep(10000000L);
+        Thread.sleep(5000L);
     }
 
 }

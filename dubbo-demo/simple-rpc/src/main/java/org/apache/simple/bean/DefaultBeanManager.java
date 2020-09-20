@@ -49,4 +49,9 @@ public class DefaultBeanManager implements BeanManager{
     public void registerSingleton(String serviceName, Object singleton) {
         beanFactory.put(serviceName,singleton);
     }
+
+    @Override
+    public Map<String, Object> getBeans() {
+        return beanFactory;
+    }
 }

@@ -11,6 +11,10 @@
 
     <artifactId>simple-rpc</artifactId>
 
+    <properties>
+        <slf4j-log4j12.version>1.7.25</slf4j-log4j12.version>
+    </properties>
+
     <dependencies>
         <!-- netty 网络框架 -->
         <dependency>
@@ -57,6 +61,21 @@
             <groupId>org.apache.zookeeper</groupId>
             <artifactId>zookeeper</artifactId>
             <!--<version>3.5.5</version>-->
+        </dependency>
+
+        <!-- log -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j-log4j12.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
         </dependency>
     </dependencies>
 </project>

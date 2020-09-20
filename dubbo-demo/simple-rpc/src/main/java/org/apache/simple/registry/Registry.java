@@ -34,4 +34,6 @@ public interface Registry<T> {
     void unregisterService(ServiceInstance<T> instance) throws Exception;
 
     List<ServiceInstance<T>> queryForInstances(String serviceName) throws Exception;
+
+    void addServiceCache(String serviceName) throws Exception;
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.simple.bean;
 
+import java.util.Map;
+
 /**
  * @program: dubbo-parent
  * @description: rpc 提供的bean管理工具抽象
@@ -45,5 +47,11 @@ public interface BeanManager {
      * @param singleton 单例对象
      */
     void registerSingleton(String serviceName,Object singleton);
+
+    /**
+     *  获取所有注册的rpc bean
+     * @return this.getClass.getName() - bean
+     */
+    Map<String,Object> getBeans();
 
 }

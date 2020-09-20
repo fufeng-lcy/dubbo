@@ -28,10 +28,15 @@ import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.details.InstanceSerializer;
 import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 import org.apache.curator.x.discovery.details.ServiceCacheImpl;
+import org.apache.simple.bean.RpcBeanFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -41,36 +46,38 @@ import java.util.stream.Collectors;
  * @create: 2020-09-18
  * @see ServiceCacheImpl serviceCache 实现
  */
-public class ZookeeperRegistry<T> implements Registry<T>{
+public class ZookeeperRegistry<T> implements Registry<T> {
+
+    private static Logger logger = LoggerFactory.getLogger(ZookeeperRegistry.class);
 
     /**
-     *  服务监听实例
+     * 服务监听实例
      */
     private Map<String, List<ServiceInstanceListener<T>>> listeners =
             Maps.newConcurrentMap();
 
     /**
-     *  实例序列化器
+     * 实例序列化器
      */
     private InstanceSerializer serializer =
             new JsonInstanceSerializer<>(ServerInfo.class);
     /**
-     *  服务发现
+     * 服务发现
      */
     private ServiceDiscovery<T> serviceDiscovery;
     /**
-     *  服务缓存
+     * 服务缓存
      */
-    private ServiceCache<T> serviceCache;
+    private Map<String, ServiceCache<T>> serviceCache;
     /**
-     *  zk默认地址
+     * zk默认地址
      */
     private String address = "127.0.0.1:2181";
 
     /**
-     *  默认的zk根目录
+     * 默认的zk根目录
      */
-    private String root = "/rpc";
+    private final String root = "/rpc";
 
     public void start() throws Exception {
         // 初始化CuratorFramework
@@ -87,37 +94,81 @@ public class ZookeeperRegistry<T> implements Registry<T>{
                 .serializer(serializer)
                 .build();
 
-        // 创建ServiceCache，监Zookeeper相应节点的变化，也方便后续的读取
-        serviceCache = serviceDiscovery.serviceCacheBuilder()
-                .name(root)
-                .build();
+        // 如果是服务端发布服务
+        if (Objects.nonNull(RpcBeanFactory.getBeanManager())) {
+            // 获取所有的Bean
+            final Map<String, Object> beans =
+                    RpcBeanFactory.getBeanManager().getBeans();
+            if (beans.size() > 0) {
+                if (Objects.isNull(serviceCache)) {
+                    synchronized (root) {
+                        if (Objects.isNull(serviceCache)) {
+                            serviceCache = new ConcurrentHashMap<>();
+                        }
+                    }
+                }
+                for (Map.Entry<String, Object> entry : beans.entrySet()) {
+                    final ServiceCache<T> sc = serviceDiscovery.serviceCacheBuilder()
+                            .name("/" + entry.getKey()).build();
+                    // 创建ServiceCache，监Zookeeper相应节点的变化，也方便后续的读取
+                    this.serviceCache.put(entry.getKey(), sc);
+                    // 启动ServiceCache
+                    sc.start();
+                }
+            } else {
+                logger.info("没有需要发布的服务");
+            }
+        }
 
         // 阻塞当前线程，等待连接成
         client.blockUntilConnected();
 
         // 启动ServiceDiscovery
         serviceDiscovery.start();
-        // 启动ServiceCache
-        serviceCache.start();
     }
+
     @Override
     public void registerService(ServiceInstance<T> service)
             throws Exception {
         serviceDiscovery.registerService(service);
     }
+
     @Override
     public void unregisterService(ServiceInstance service)
             throws Exception {
         serviceDiscovery.unregisterService(service);
     }
+
     @Override
     public List<ServiceInstance<T>> queryForInstances(
             String name) throws Exception {
         // 直接根据name进行过滤ServiceCache中的缓存数据
-        return serviceCache.getInstances().stream()
+        /*return serviceCache.getInstances().stream()
                 .filter(svn -> svn.getName().equals(name))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList());*/
         //return new ArrayList<>(serviceDiscovery.queryForInstances(name));
+        return serviceCache.get(name).getInstances();
+    }
+
+    /**
+     * 消费端增加服务缓存
+     *
+     * @param serviceName 服务名称
+     */
+    public void addServiceCache(String serviceName) throws Exception {
+        final ServiceCache<T> sc = serviceDiscovery.serviceCacheBuilder()
+                .name("/" + serviceName).build();
+        if (Objects.isNull(serviceCache)) {
+            synchronized (root) {
+                if (Objects.isNull(serviceCache)) {
+                    serviceCache = new ConcurrentHashMap<>();
+                }
+            }
+        }
+        // 创建ServiceCache，监Zookeeper相应节点的变化，也方便后续的读取
+        this.serviceCache.put(serviceName, sc);
+        // 启动ServiceCache
+        sc.start();
     }
 
 }

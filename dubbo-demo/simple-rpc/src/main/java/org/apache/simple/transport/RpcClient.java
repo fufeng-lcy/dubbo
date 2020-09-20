@@ -25,7 +25,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.apache.simple.codec.RpcClientHandler;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import org.apache.simple.codec.RpcMessageDecoder;
 import org.apache.simple.codec.RpcMessageEncoder;
 import org.apache.simple.constants.RpcConstant;
@@ -73,6 +74,7 @@ public class RpcClient implements Cloneable{
                 .option(ChannelOption.SO_KEEPALIVE,true) // 保持常连接
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .channel(NioSocketChannel.class)
+                .handler(new LoggingHandler(LogLevel.DEBUG))
                 // 指定ChannelHandler顺序
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
@@ -91,8 +93,8 @@ public class RpcClient implements Cloneable{
     public ChannelFuture connect(){
         final ChannelFuture connect =
                 clientBootstrap.connect(host, port);
-        connect.awaitUninterruptibly();
-        return connect;
+        return connect.awaitUninterruptibly();
+        //return connect;
     }
 
     /**
