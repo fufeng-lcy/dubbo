@@ -50,6 +50,8 @@ public class ZookeeperRegistry<T> implements Registry<T> {
 
     /**
      * 服务监听实例
+     *  key(String) -> 服务注册名称
+     *  value(ServiceInstanceListener) -> 服务实例监听器
      */
     private final Map<String, List<ServiceInstanceListener<T>>> listeners =
             Maps.newConcurrentMap();

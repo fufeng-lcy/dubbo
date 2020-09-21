@@ -22,6 +22,7 @@ import org.apache.simple.registry.ServerInfo;
 import org.apache.simple.registry.ZookeeperRegistry;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @program: dubbo-parent
@@ -46,6 +47,16 @@ public class Consumer {
         final Map<String, Object> maps = userService.maps();
         System.out.println(maps);
         Thread.sleep(5000L);
+
+        TimeUnit.SECONDS.sleep(25);
+
+        final String result1 = userService.users("magic");
+        System.out.println(result1);
+        final int age1 = userService.getAge("magic");
+        System.out.println(age1);
+        final Map<String, Object> maps1 = userService.maps();
+        System.out.println(maps1);
+
     }
 
 }

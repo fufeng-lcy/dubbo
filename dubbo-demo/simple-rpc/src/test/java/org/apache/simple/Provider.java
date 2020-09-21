@@ -32,6 +32,8 @@ import org.apache.simple.transport.server.RpcServer;
  */
 public class Provider {
 
+    private static int port = 20881;
+
     public static void main(String[] args) throws Exception {
         // 创建DemoServiceImpl，并注册到BeanManager中
         RpcServiceLoader.spi();
@@ -43,13 +45,15 @@ public class Provider {
         ZookeeperRegistry<ServerInfo> discovery =
                 new ZookeeperRegistry<>();
         discovery.start();
-        ServerInfo serverInfo = new ServerInfo("127.0.0.1", 20881);
+
+        // 启动RpcServer，等待Client的请求
+        RpcServer rpcServer = new RpcServer(port);
+        rpcServer.start();
+
+        ServerInfo serverInfo = new ServerInfo("127.0.0.1", port);
         discovery.registerService(
                 ServiceInstance.<ServerInfo>builder().name(UserService.class.getName())
                         .payload(serverInfo).build());
-        // 启动RpcServer，等待Client的请求
-        RpcServer rpcServer = new RpcServer(20881);
-        rpcServer.start();
         Thread.sleep(10000000L);
     }
 
