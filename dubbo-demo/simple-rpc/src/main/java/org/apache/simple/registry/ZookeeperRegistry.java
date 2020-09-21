@@ -46,18 +46,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ZookeeperRegistry<T> implements Registry<T> {
 
-    private static Logger logger = LoggerFactory.getLogger(ZookeeperRegistry.class);
+    private static final Logger logger = LoggerFactory.getLogger(ZookeeperRegistry.class);
 
     /**
      * 服务监听实例
      */
-    private Map<String, List<ServiceInstanceListener<T>>> listeners =
+    private final Map<String, List<ServiceInstanceListener<T>>> listeners =
             Maps.newConcurrentMap();
 
     /**
      * 实例序列化器
      */
-    private InstanceSerializer serializer =
+    private final InstanceSerializer serializer =
             new JsonInstanceSerializer<>(ServerInfo.class);
     /**
      * 服务发现
@@ -70,7 +70,7 @@ public class ZookeeperRegistry<T> implements Registry<T> {
     /**
      * zk默认地址
      */
-    private String address = "127.0.0.1:2181";
+    private final String address = "127.0.0.1:2181";
 
     /**
      * 默认的zk根目录
@@ -78,6 +78,10 @@ public class ZookeeperRegistry<T> implements Registry<T> {
     private final String root = "/rpc";
 
     public void start() throws Exception {
+        start(address);
+    }
+
+    public void start(String address) throws Exception {
         // 初始化CuratorFramework
         CuratorFramework client = CuratorFrameworkFactory
                 .newClient(address, new ExponentialBackoffRetry(1000, 3));

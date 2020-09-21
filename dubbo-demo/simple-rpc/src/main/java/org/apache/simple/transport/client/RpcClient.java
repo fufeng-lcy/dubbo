@@ -15,7 +15,7 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package org.apache.simple.transport;
+package org.apache.simple.transport.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -24,12 +24,15 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.apache.simple.codec.RpcMessageDecoder;
-import org.apache.simple.codec.RpcMessageEncoder;
 import org.apache.simple.constants.RpcConstant;
+import org.apache.simple.transport.client.runner.ClientExecutor;
+import org.apache.simple.transport.codec.RpcMessageDecoder;
+import org.apache.simple.transport.codec.RpcMessageEncoder;
+import org.apache.simple.transport.common.NettyEventLoopFactory;
+
+import static org.apache.simple.transport.common.NettyEventLoopFactory.socketChannelClass;
 
 /**
  * @program: dubbo-parent
@@ -73,7 +76,7 @@ public class RpcClient implements Cloneable{
                 .option(ChannelOption.TCP_NODELAY,true) // 禁用TCP nodelay算法
                 .option(ChannelOption.SO_KEEPALIVE,true) // 保持常连接
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                .channel(NioSocketChannel.class)
+                .channel(socketChannelClass())
                 .handler(new LoggingHandler(LogLevel.DEBUG))
                 // 指定ChannelHandler顺序
                 .handler(new ChannelInitializer<SocketChannel>() {
@@ -101,6 +104,8 @@ public class RpcClient implements Cloneable{
      *  关闭连接
      */
     public void close(){
+        // 关闭任务线程组
+        ClientExecutor.closeExecutor();
         group.shutdownGracefully();
     }
 }

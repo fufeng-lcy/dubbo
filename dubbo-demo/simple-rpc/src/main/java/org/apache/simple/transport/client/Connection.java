@@ -15,7 +15,7 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package org.apache.simple.transport;
+package org.apache.simple.transport.client;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.DefaultEventLoop;
@@ -26,6 +26,7 @@ import org.apache.simple.protocol.Header;
 import org.apache.simple.protocol.Message;
 import org.apache.simple.protocol.Request;
 import org.apache.simple.protocol.Response;
+import org.apache.simple.transport.client.runner.ClientExecutor;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -45,12 +46,12 @@ public class Connection implements Closeable {
     /**
      * 定义一个消息ID生成
      */
-    private static AtomicLong ID_GENERATOR = new AtomicLong(0);
+    private static final AtomicLong ID_GENERATOR = new AtomicLong(0);
 
     /**
      * 定义消息ID，消息回调相关信息
      *  这里如果没有响应可能会存在内存溢出情况，需要处理
-     *  TODO 内存溢出问题 定时删除
+     *  定时删除 {@link ClientExecutor}
      */
     public static Map<Long, NettyResponseFuture<Response>> IN_FLIGHT_REQUEST_MAP =
             new HashMap<>();
@@ -63,7 +64,7 @@ public class Connection implements Closeable {
     /**
      * 是否连接
      */
-    private AtomicBoolean isConnected = new AtomicBoolean();
+    private final AtomicBoolean isConnected = new AtomicBoolean();
 
     public Connection() {
         this.isConnected.set(false);

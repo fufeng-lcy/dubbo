@@ -15,18 +15,20 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package org.apache.simple.transport;
+package org.apache.simple.transport.server;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.apache.simple.codec.RpcMessageDecoder;
-import org.apache.simple.codec.RpcMessageEncoder;
 import org.apache.simple.constants.RpcConstant;
+import org.apache.simple.transport.codec.RpcMessageDecoder;
+import org.apache.simple.transport.codec.RpcMessageEncoder;
+import org.apache.simple.transport.common.NettyEventLoopFactory;
+
+import static org.apache.simple.transport.common.NettyEventLoopFactory.serverSocketChannelClass;
 
 
 /**
@@ -71,7 +73,7 @@ public class RpcServer {
                 RpcConstant.DEFAULT_IO_THREADS, "worker");
         serverBootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
+                .channel(serverSocketChannelClass())
                 .option(ChannelOption.SO_REUSEADDR, Boolean.TRUE)
                 .childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)

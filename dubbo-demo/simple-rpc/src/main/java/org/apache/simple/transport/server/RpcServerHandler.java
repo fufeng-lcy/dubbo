@@ -15,42 +15,40 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package org.apache.simple;
+package org.apache.simple.transport.server;
 
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.simple.bean.RpcBeanFactory;
-import org.apache.simple.registry.ServerInfo;
-import org.apache.simple.registry.ZookeeperRegistry;
-import org.apache.simple.spi.RpcServiceLoader;
-import org.apache.simple.transport.server.RpcServer;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.simple.transport.server.runner.InvokeRunner;
+import org.apache.simple.protocol.Message;
+import org.apache.simple.protocol.Request;
+import org.apache.simple.utils.CheckUtil;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * @program: dubbo-parent
- * @description: 提供者
+ * @description: Rpc 服务器业务处理
  * @author: <a href="https://github.com/lcy2013">MagicLuo(扶风)</a>
  * @create: 2020-09-18
  */
-public class Provider {
+public class RpcServerHandler extends SimpleChannelInboundHandler<Message<Request>> {
 
-    public static void main(String[] args) throws Exception {
-        // 创建DemoServiceImpl，并注册到BeanManager中
-        RpcServiceLoader.spi();
-        RpcBeanFactory.getBeanManager().registerSingleton(UserService.class.getName(),
-                new UserServiceImpl());
+    // 业务线程池
+    static Executor executor = Executors.newCachedThreadPool();
 
-        // 创建ZookeeperRegistry，并将Provider的地址信息封装成ServerInfo
-        // 对象注册到Zookeeper
-        ZookeeperRegistry<ServerInfo> discovery =
-                new ZookeeperRegistry<>();
-        discovery.start();
-        ServerInfo serverInfo = new ServerInfo("127.0.0.1", 20881);
-        discovery.registerService(
-                ServiceInstance.<ServerInfo>builder().name(UserService.class.getName())
-                        .payload(serverInfo).build());
-        // 启动RpcServer，等待Client的请求
-        RpcServer rpcServer = new RpcServer(20881);
-        rpcServer.start();
-        Thread.sleep(10000000L);
+    @Override
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext,
+                                Message<Request> message) throws Exception {
+        // 获取消息头中的扩展信息
+        final byte extraInfo = message.getHeader().getExtraInfo();
+        // 判断是否是心跳消息，如果是心跳消息直接返回
+        if (CheckUtil.isHeartBeat(extraInfo)){
+            channelHandlerContext.writeAndFlush(message);
+            return;
+        }
+        // 如果不是心跳消息就直接封装成一个Runnable交给业务线程执行
+        executor.execute(new InvokeRunner(message,channelHandlerContext));
     }
-
 }

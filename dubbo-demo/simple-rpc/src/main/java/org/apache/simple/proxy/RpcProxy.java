@@ -26,9 +26,13 @@ import org.apache.simple.protocol.Request;
 import org.apache.simple.protocol.Response;
 import org.apache.simple.registry.Registry;
 import org.apache.simple.registry.ServerInfo;
-import org.apache.simple.transport.Connection;
-import org.apache.simple.transport.NettyResponseFuture;
-import org.apache.simple.transport.RpcClient;
+import org.apache.simple.transport.client.Connection;
+import org.apache.simple.transport.client.NettyResponseFuture;
+import org.apache.simple.transport.client.RpcClient;
+import org.apache.simple.transport.client.runner.ClientExecutor;
+import org.apache.simple.transport.client.runner.ResponseFutureRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -37,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.simple.constants.RpcConstant.MAGIC;
 import static org.apache.simple.constants.RpcConstant.VERSION;
@@ -49,12 +54,18 @@ import static org.apache.simple.constants.RpcConstant.VERSION;
  */
 public class RpcProxy implements InvocationHandler {
 
+    private static final Logger logger = LoggerFactory.getLogger(RpcProxy.class);
+
     // 需要代理服务的名称
-    private String serviceName;
+    private final String serviceName;
     // 用于与zookeeper交互，缓存功能
-    private Registry<ServerInfo> registry;
+    private final Registry<ServerInfo> registry;
     // 缓存header
     public Map<Method, Header> headerCache = new ConcurrentHashMap<>();
+
+    static {
+        ClientExecutor.executeRpcClientResponseTimeout(new ResponseFutureRunner());
+    }
 
     public RpcProxy(String serviceName, Registry<ServerInfo> registry) {
         this.serviceName = serviceName;
@@ -118,7 +129,7 @@ public class RpcProxy implements InvocationHandler {
         if (serverInfo == null) {
             throw new RuntimeException("get available server error");
         }
-        System.out.println("client remote address -> "+serverInfo.getHost()+":"+serverInfo.getPort());
+        logger.info("client remote address -> "+serverInfo.getHost()+":"+serverInfo.getPort());
         // 创建DemoRpcClient连接指定的Server端
         RpcClient demoRpcClient = new RpcClient(
                 serverInfo.getHost(), serverInfo.getPort());
@@ -128,9 +139,13 @@ public class RpcProxy implements InvocationHandler {
         Connection connection = new Connection(channelFuture, true);
         NettyResponseFuture<Response> responseFuture =
                 connection.request(message, RpcConstant.DEFAULT_TIMEOUT);
-        // 等待请求对应的响应
-        return responseFuture.getPromise().get(
-                RpcConstant.DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS);
-
+        try {
+            // 等待请求对应的响应
+            return responseFuture.getPromise().get(
+                    RpcConstant.DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS);
+        }catch (TimeoutException | ExecutionException | InterruptedException te){
+            logger.info(responseFuture.getMessage().getHeader().getMessageId()+" failed:"+te.getMessage());
+        }
+        return null;
     }
 }

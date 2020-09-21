@@ -15,7 +15,7 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package org.apache.simple.invoke;
+package org.apache.simple.transport.server.runner;
 
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.simple.bean.RpcBeanFactory;
@@ -23,6 +23,8 @@ import org.apache.simple.protocol.Header;
 import org.apache.simple.protocol.Message;
 import org.apache.simple.protocol.Request;
 import org.apache.simple.protocol.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 
@@ -34,15 +36,17 @@ import java.lang.reflect.Method;
  */
 public class InvokeRunner implements Runnable{
 
+    private static final Logger logger = LoggerFactory.getLogger(InvokeRunner.class);
+
     /**
      *  执行业务的消息
      */
-    private Message<Request> message;
+    private final Message<Request> message;
 
     /**
      *  通道上下文用于处理网络数据发送
      */
-    private ChannelHandlerContext ctx;
+    private final ChannelHandlerContext ctx;
 
     public InvokeRunner(Message<Request> message,
                         ChannelHandlerContext channelHandlerContext) {
@@ -69,6 +73,7 @@ public class InvokeRunner implements Runnable{
             result = method.invoke(bean, payload.getArgs());
         }catch (Exception e){
             // TODO
+            logger.info("invoke error -> "+e.getMessage());
         }finally {
             // TODO
         }

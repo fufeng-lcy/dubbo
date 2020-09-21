@@ -5,7 +5,7 @@
  *
  * ProjectName: dubbo-parent
  * @Author : <a href="https://github.com/lcy2013">MagicLuo(扶风)</a>
- * @date : 2020-09-18
+ * @date : 2020-09-21
  * @version : 1.0.0-RELEASE
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -15,42 +15,46 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package org.apache.simple;
+package org.apache.simple.transport.client.runner;
 
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.simple.bean.RpcBeanFactory;
-import org.apache.simple.registry.ServerInfo;
-import org.apache.simple.registry.ZookeeperRegistry;
-import org.apache.simple.spi.RpcServiceLoader;
-import org.apache.simple.transport.server.RpcServer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @program: dubbo-parent
- * @description: 提供者
+ * @description: 客户端执行器，具备线程池隔离
  * @author: <a href="https://github.com/lcy2013">MagicLuo(扶风)</a>
- * @create: 2020-09-18
+ * @create: 2020-09-21
  */
-public class Provider {
+public class ClientExecutor {
 
-    public static void main(String[] args) throws Exception {
-        // 创建DemoServiceImpl，并注册到BeanManager中
-        RpcServiceLoader.spi();
-        RpcBeanFactory.getBeanManager().registerSingleton(UserService.class.getName(),
-                new UserServiceImpl());
+    /**
+     * 建立一个用于执行客户端请求超时的线程执行组
+     */
+    private static final ScheduledExecutorService executorService =
+            Executors.newScheduledThreadPool(1);
 
-        // 创建ZookeeperRegistry，并将Provider的地址信息封装成ServerInfo
-        // 对象注册到Zookeeper
-        ZookeeperRegistry<ServerInfo> discovery =
-                new ZookeeperRegistry<>();
-        discovery.start();
-        ServerInfo serverInfo = new ServerInfo("127.0.0.1", 20881);
-        discovery.registerService(
-                ServiceInstance.<ServerInfo>builder().name(UserService.class.getName())
-                        .payload(serverInfo).build());
-        // 启动RpcServer，等待Client的请求
-        RpcServer rpcServer = new RpcServer(20881);
-        rpcServer.start();
-        Thread.sleep(10000000L);
+    private static final AtomicBoolean startRpcResponseClear = new AtomicBoolean(false);
+
+    /**
+     *  执行移除rpc超时时间的消息
+     * @param runnable 任务
+     */
+    public static void executeRpcClientResponseTimeout(Runnable runnable) {
+        synchronized (startRpcResponseClear) {
+            if (!startRpcResponseClear.get()) {
+                executorService.scheduleAtFixedRate(runnable, 15, 15, TimeUnit.SECONDS);
+                startRpcResponseClear.set(true);
+            }
+        }
     }
 
+    /**
+     * 用于关闭客户端所有的线程执行组
+     */
+    public static void closeExecutor() {
+        ClientExecutor.executorService.shutdown();
+    }
 }
