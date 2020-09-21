@@ -898,11 +898,51 @@
     AbstractRegistry 的实现类——FailbackRegistry 的核心实现，它主要是在 AbstractRegistry 的基础上，提供了重试机制。
     具体方法就是通过时间轮，在 register()/ unregister()、subscribe()/ unsubscribe() 等核心方法失败时，添加重试定时任务，实现重试机制，同时也添加了相应的定时任务清理逻辑。
 
+13、zookeeper - dubbo如何使用
+    dubbo 应用的常用目录
+        root                    /dubbo
+        service        /org.apache.service
+        Type      /providers     /consumers   /routes  /configurations
+        URL   /consumer://10.20.153.10/org.apache.dubbo.foo.BarService?version=1.0.0&application=kylin
+    root : 默认是 dubbo
+    service : 服务接口的全路径名称
+    Type : URL 的分类，一共有四种分类，分别是：providers（服务提供者列表）、consumers（服务消费者列表）、routes（路由规则列表）和 configurations（配置规则列表）
+    URL : Provider URL 、Consumer URL 、Routes URL 和 Configurations URL
 
+    ZookeeperRegistryFactory
+         RegistryFactory 这个工厂接口以及其子类 AbstractRegistryFactory，AbstractRegistryFactory 仅仅是提供了缓存 Registry 对象的功能，并未真正实现 Registry 的创建，具体的创建逻辑是由子类完成的。
+         在 dubbo-registry-zookeeper 模块中的 SPI 配置文件(META-INF/dubbo/internal)中，指定了RegistryFactory 的实现类 —— ZookeeperRegistryFactory。
 
+    ZookeeperTransporter
+        dubbo-remoting-zookeeper 模块是 dubbo-remoting 模块的子模块，但它并不依赖 dubbo-remoting 中的其他模块，是相对独立的。
 
+        简单来说，dubbo-remoting-zookeeper 模块是在 Apache Curator 的基础上封装了一套 Zookeeper 客户端，将与 Zookeeper 的交互融合到 Dubbo 的体系之中。
 
+        dubbo-remoting-zookeeper 模块中有两个核心接口：ZookeeperTransporter 接口和 ZookeeperClient 接口。
 
+        ZookeeperTransporter 只负责一件事情，那就是创建 ZookeeperClient 对象。
+
+    ZookeeperClient
+        ZookeeperClient 接口是 Dubbo 封装的 Zookeeper 客户端，该接口定义了大量的方法，都是用来与 Zookeeper 进行交互的。
+
+        抽象类实现 - AbstractZookeeperClient 提供能力如下:
+            1、缓存当前 ZookeeperClient 实例创建的持久 ZNode 节点
+
+            2、管理当前 ZookeeperClient 实例添加的各类监听器
+
+            3、管理当前 ZookeeperClient 的运行状态
+
+        dubbo-remoting-zookeeper 对外提供了 StateListener、DataListener 和 ChildListener 三种类型的监听器
+            StateListener：主要负责监听 Dubbo 与 Zookeeper 集群的连接状态，
+                    包括 SESSION_LOST、CONNECTED、RECONNECTED、SUSPENDED 和 NEW_SESSION_CREATED。
+
+            DataListener：主要监听某个节点存储的数据变化。
+
+            **ChildListener：**主要监听某个 ZNode 节点下的子节点变化。
+
+         AbstractZookeeperClient 中维护了 stateListeners、listeners 以及 childListeners 三个集合，分别管理上述三种类型的监听器。
+
+    ZookeeperRegistry
 
 
 

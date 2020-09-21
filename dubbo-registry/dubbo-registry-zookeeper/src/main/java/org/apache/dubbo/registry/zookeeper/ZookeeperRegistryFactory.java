@@ -31,12 +31,17 @@ public class ZookeeperRegistryFactory extends AbstractRegistryFactory {
 
     /**
      * Invisible injection of zookeeper client via IOC/SPI
-     * @param zookeeperTransporter
+     * @param zookeeperTransporter  zk 传输工具
      */
     public void setZookeeperTransporter(ZookeeperTransporter zookeeperTransporter) {
         this.zookeeperTransporter = zookeeperTransporter;
     }
 
+    /**
+     *  创建 ZookeeperRegistry 实例
+     * @param url url
+     * @return ZookeeperRegistry 实例完成与 Zookeeper 的交互
+     */
     @Override
     public Registry createRegistry(URL url) {
         return new ZookeeperRegistry(url, zookeeperTransporter);

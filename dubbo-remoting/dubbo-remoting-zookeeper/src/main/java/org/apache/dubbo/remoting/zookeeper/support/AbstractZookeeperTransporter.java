@@ -40,14 +40,22 @@ import static org.apache.dubbo.common.constants.CommonConstants.TIMEOUT_KEY;
  */
 public abstract class AbstractZookeeperTransporter implements ZookeeperTransporter {
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperTransporter.class);
+
+    /**
+     *  缓存 ZookeeperClient 实例
+     */
     private final Map<String, ZookeeperClient> zookeeperClientMap = new ConcurrentHashMap<>();
 
     /**
      * share connnect for registry, metadata, etc..
      * <p>
      * Make sure the connection is connected.
+     *  在某个 Zookeeper 节点无法连接时，切换到备用 Zookeeper 地址
      *
-     * @param url
+     *  首先会得到上述 URL 中配置的 127.0.0.1:2181、127.0.0.1:8989 和 127.0.0.1:9999 这三个 Zookeeper 节点地址，
+     *  然后从 ZookeeperClientMap 缓存（这是一个 Map，Key 为 Zookeeper 节点地址，Value 是相应的 ZookeeperClient 实例）中查找一个可用 ZookeeperClient 实例。
+     *  如果查找成功，则复用 ZookeeperClient 实例；如果查找失败，则创建一个新的 ZookeeperClient 实例返回并更新 ZookeeperClientMap 缓存。
+     * @param url url
      * @return
      */
     @Override

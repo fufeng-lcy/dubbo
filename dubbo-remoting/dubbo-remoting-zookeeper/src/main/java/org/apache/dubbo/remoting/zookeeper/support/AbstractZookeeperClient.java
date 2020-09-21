@@ -49,6 +49,10 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
 
     private volatile boolean closed = false;
 
+    /**
+     *  缓存了当前 ZookeeperClient 创建的持久 ZNode 节点路径，在创建 ZNode 节点之前，会先查这个缓存，
+     *  而不是与 Zookeeper 交互来判断持久 ZNode 节点是否存在，这就减少了一次与 Zookeeper 的交互
+     */
     private final Set<String>  persistentExistNodePath = new ConcurrentHashSet<>();
 
     public AbstractZookeeperClient(URL url) {
@@ -119,8 +123,11 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
 
     @Override
     public void addDataListener(String path, DataListener listener, Executor executor) {
+        // 获取指定path上的DataListener集合
         ConcurrentMap<DataListener, TargetDataListener> dataListenerMap = listeners.computeIfAbsent(path, k -> new ConcurrentHashMap<>());
+        // 查询该DataListener关联的TargetDataListener
         TargetDataListener targetListener = dataListenerMap.computeIfAbsent(listener, k -> createTargetDataListener(path, k));
+        // 通过TargetDataListener在指定的path上添加监听
         addTargetDataListener(path, targetListener, executor);
     }
 
