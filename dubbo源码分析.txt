@@ -880,6 +880,24 @@
         AbstractRegistry 实现的 destroy() 方法会调用 unregister() 方法和 unsubscribe() 方法将当前节点注册的 URL 以及订阅的监听全部清理掉，
         其中不会清理非动态注册的 URL（即 dynamic 参数明确指定为 false）。
 
+12、服务可靠性如何保障 - (FailbackRegistry)
+    为了保证服务的可靠性，重试机制就变得必不可少了。
+    "重试机制"就是在请求失败时，客户端重新发起一个一模一样的请求，尝试调用相同或不同的服务端，完成相应的业务操作。
+    能够使用重试机制的业务接口得是"幂等"的，也就是无论请求发送多少次，得到的结果都是一样的，例如查询操作。
+
+    dubbo-registry 将重试机制的相关实现放到了 AbstractRegistry 的子类—— FailbackRegistry 中。
+    接入 ZooKeeper、etcd 等开源服务发现组件的 Registry 实现，都继承了 FailbackRegistry，也就都拥有了失败重试的能力。
+
+    org.apache.dubbo.registry.support.FailbackRegistry.register
+
+    重试任务 org.apache.dubbo.registry.retry.FailedRegisteredTask 继承至 AbstractRetryTask
+
+    AbstractRetryTask 中维护了当前任务关联的 URL、当前重试的次数等信息，在其 run() 方法中，
+    会根据重试 URL 中指定的重试次数（retry.times 参数，默认值为 3）、任务是否被取消以及时间轮的状态，决定此次任务的 doRetry() 方法是否正常执行
+
+    AbstractRegistry 的实现类——FailbackRegistry 的核心实现，它主要是在 AbstractRegistry 的基础上，提供了重试机制。
+    具体方法就是通过时间轮，在 register()/ unregister()、subscribe()/ unsubscribe() 等核心方法失败时，添加重试定时任务，实现重试机制，同时也添加了相应的定时任务清理逻辑。
+
 
 
 
