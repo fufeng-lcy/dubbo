@@ -830,6 +830,65 @@
          request :  byte -> message
          response : message -> message
 
+11、dubbo register 核心接口(dubbo-registry/dubbo-registry-api)
+    Dubbo 一般使用 Node 这个接口来抽象节点的概念，Node不仅可以表示 Provider 和 Consumer 节点，还可以表示注册中心节点。
+
+    RegistryService 接口抽象了注册服务的基本行为。
+
+    Registry 接口继承了 RegistryService 接口和 Node 接口。
+
+    RegistryFactory 接口是 Registry 的工厂接口，负责创建 Registry 对象，其中 @SPI 注解指定了默认的扩展名为 dubbo，@Adaptive 注解表示会生成适配器类并根据 URL 参数中的 protocol 参数值选择相应的实现。
+        EtcdRegistryFactory
+        ConsulRegistryFactory
+        ZookeeperRegistryFactory
+        NacosRegistryFactory
+        DubboRegistryFactory
+        ...
+
+    RegistryFactoryWrapper 是 RegistryFactory 接口的 Wrapper 类，它在底层 RegistryFactory 创建的 Registry 对象外层封装了一个 ListenerRegistryWrapper ，
+    ListenerRegistryWrapper 中维护了一个 RegistryServiceListener 集合，会将 register()、subscribe() 等事件通知到 RegistryServiceListener 监听器。
+
+    AbstractRegistryFactory 是一个实现了 RegistryFactory 接口的抽象类，提供了规范 URL 的操作以及缓存 Registry 对象的公共能力。
+    其中，缓存 Registry 对象是使用 HashMap<String, Registry> 集合实现的（REGISTRIES 静态字段）。
+    在规范 URL 的实现逻辑中，AbstractRegistryFactory 会将 RegistryService 的类名设置为 URL path 和 interface 参数，同时删除 export 和 refer 参数。
+
+    AbstractRegistry 实现了 Registry 接口，虽然 AbstractRegistry 本身在内存中实现了注册数据的读写功能，也没有什么抽象方法，
+    但它依然被标记成了抽象类，从Registry 继承关系图中可以看出，Registry 接口的所有实现类都继承了 AbstractRegistry。
+        为了减轻注册中心组件的压力，AbstractRegistry 会把当前节点订阅的 URL 信息缓存到本地的 Properties 文件中(File file): org.apache.dubbo.registry.support.AbstractRegistry.AbstractRegistry
+
+    1、本地缓存 (org.apache.dubbo.registry.support.AbstractRegistry.notify(URL, NotifyListener, List<URL>))
+        Dubbo 在微服务架构中解决了各个服务间协作的难题；作为 Provider 和 Consumer 的底层依赖，它会与服务一起打包部署。
+        dubbo-registry 也仅仅是其中一个依赖包，负责完成与 ZooKeeper、etcd、Consul 等服务发现组件的交互。
+
+        当 Provider 端暴露的 URL 发生变化时，ZooKeeper 等服务发现组件会通知 Consumer 端的 Registry 组件，Registry 组件会调用 notify() 方法，
+        被通知的 Consumer 能匹配到所有 Provider 的 URL 列表并写入 properties 集合中。
+
+    2、注册、订阅
+        AbstractRegistry 实现了 Registry 接口，它实现的 registry() 方法会将当前节点要注册的 URL 缓存到 registered 集合，
+        而 unregistry() 方法会从 registered 集合删除指定的 URL，例如当前节点下线的时候。
+
+        subscribe() 方法会将当前节点作为 Consumer 的 URL 以及相关的 NotifyListener 记录到 subscribed 集合，
+        unsubscribe() 方法会将当前节点的 URL 以及关联的 NotifyListener 从 subscribed 集合删除。
+
+    3、回复与销毁
+        AbstractRegistry 中还有另外两个需要关注的方法：recover() 方法和destroy() 方法。
+
+        在 Provider 因为网络问题与注册中心断开连接之后，会进行重连，重新连接成功之后，会调用 recover() 方法将 registered 集合中的全部 URL 重新走一遍 register() 方法，恢复注册数据。
+        同样，recover() 方法也会将 subscribed 集合中的 URL 重新走一遍 subscribe() 方法，恢复订阅监听器。
+
+        在当前节点下线的时候，会调用 Node.destroy() 方法释放底层资源。
+        AbstractRegistry 实现的 destroy() 方法会调用 unregister() 方法和 unsubscribe() 方法将当前节点注册的 URL 以及订阅的监听全部清理掉，
+        其中不会清理非动态注册的 URL（即 dynamic 参数明确指定为 false）。
+
+
+
+
+
+
+
+
+
+
 
 
 

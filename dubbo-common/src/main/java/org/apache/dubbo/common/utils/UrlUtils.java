@@ -390,7 +390,14 @@ public class UrlUtils {
         }
     }
 
+    /**
+     *  Consumer URL 与 Provider URL 的是否匹配
+     * @param consumerUrl 消费端Url
+     * @param providerUrl 服务提供端Url
+     * @return 是否匹配
+     */
     public static boolean isMatch(URL consumerUrl, URL providerUrl) {
+        // 匹配 Consumer 和 Provider 的接口（优先取 interface 参数，其次再取 path）。双方接口相同或者其中一方为“*”，则匹配成功，执行下一步。
         String consumerInterface = consumerUrl.getServiceInterface();
         String providerInterface = providerUrl.getServiceInterface();
         //FIXME accept providerUrl with '*' as interface name, after carefully thought about all possible scenarios I think it's ok to add this condition.
@@ -400,10 +407,13 @@ public class UrlUtils {
             return false;
         }
 
+        // 匹配 Consumer 和 Provider 的 category
         if (!isMatchCategory(providerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY),
                 consumerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY))) {
             return false;
         }
+
+        // 检测 Consumer URL 和 Provider URL 中的 enable 参数是否符合条件
         if (!providerUrl.getParameter(ENABLED_KEY, true)
                 && !ANY_VALUE.equals(consumerUrl.getParameter(ENABLED_KEY))) {
             return false;
