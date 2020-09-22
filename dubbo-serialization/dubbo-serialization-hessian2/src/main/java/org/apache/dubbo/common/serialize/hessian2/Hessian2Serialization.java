@@ -38,21 +38,25 @@ public class Hessian2Serialization implements Serialization {
 
     @Override
     public byte getContentTypeId() {
+        // hessian2的ContentType ID
         return HESSIAN2_SERIALIZATION_ID;
     }
 
     @Override
     public String getContentType() {
+        // hessian2的ContentType
         return "x-application/hessian2";
     }
 
     @Override
     public ObjectOutput serialize(URL url, OutputStream out) throws IOException {
+        // 创建ObjectOutput对象
         return new Hessian2ObjectOutput(out);
     }
 
     @Override
     public ObjectInput deserialize(URL url, InputStream is) throws IOException {
+        // 创建ObjectInput对象
         return new Hessian2ObjectInput(is);
     }
 

@@ -31,6 +31,7 @@ import java.lang.reflect.Type;
 public class Hessian2ObjectInput implements ObjectInput {
 
     private static ThreadLocal<Hessian2Input> INPUT_TL = ThreadLocal.withInitial(() -> {
+        // 初始化Hessian2Input对象
         Hessian2Input h2i = new Hessian2Input(null);
         h2i.setSerializerFactory(Hessian2FactoryInitializer.getInstance().getSerializerFactory());
         h2i.setCloseStreamOnClose(true);
@@ -40,6 +41,7 @@ public class Hessian2ObjectInput implements ObjectInput {
     private final Hessian2Input mH2i;
 
     public Hessian2ObjectInput(InputStream is) {
+        // 触发INPUT_TL 初始化一个Hessian2Input
         mH2i = INPUT_TL.get();
         mH2i.init(is);
     }
