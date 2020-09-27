@@ -20,6 +20,10 @@ package org.apache.dubbo.remoting.buffer;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ *  封装了一个 ChannelBuffer，其实现 InputStream 接口的 write*() 方法全部都是向 ChannelBuffer 中写数据。
+ *  维护了一个 startIndex 索引，作为写数据的起始位置。
+ */
 public class ChannelBufferOutputStream extends OutputStream {
 
     private final ChannelBuffer buffer;

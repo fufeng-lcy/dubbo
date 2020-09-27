@@ -19,6 +19,9 @@ package org.apache.dubbo.remoting.buffer;
 
 import java.nio.ByteBuffer;
 
+/**
+ *  ChannelBuffer 相关工具类
+ */
 public final class ChannelBuffers {
 
     public static final ChannelBuffer EMPTY_BUFFER = new HeapChannelBuffer(0);
@@ -92,16 +95,19 @@ public final class ChannelBuffers {
 
     public static boolean equals(ChannelBuffer bufferA, ChannelBuffer bufferB) {
         final int aLen = bufferA.readableBytes();
+        // 毕竟两个buffer的可读字节
         if (aLen != bufferB.readableBytes()) {
             return false;
         }
 
+        // 比较前面的七个字节
         final int byteCount = aLen & 7;
 
         int aIndex = bufferA.readerIndex();
         int bIndex = bufferB.readerIndex();
 
         for (int i = byteCount; i > 0; i--) {
+            // 如果前面七位字符存在不同就返回false
             if (bufferA.getByte(aIndex) != bufferB.getByte(bIndex)) {
                 return false;
             }

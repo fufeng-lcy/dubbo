@@ -1012,6 +1012,36 @@
             在 Dubbo 中会抽象出一个“端点（Endpoint）”的概念，我们可以通过一个 ip 和 port 唯一确定一个端点，两个端点之间会创建 TCP 连接，可以双向传输数据。
             Dubbo 将 Endpoint 之间的 TCP 连接抽象为通道（Channel），将发起请求的 Endpoint 抽象为客户端（Client），将接收请求的 Endpoint 抽象为服务端（Server）。
 
+        dubbo 如何利用buffer？
+
+            抽象接口: org.apache.dubbo.remoting.buffer.ChannelBuffer
+                   (
+                    ChannelBuffer 接口的设计与 Netty4 中 ByteBuf 抽象类的设计基本一致，也有 readerIndex 和 writerIndex 指针的概念。
+                    // 获取工厂的方法
+                    ChannelBufferFactory factory();
+                   )
+                抽象实现: org.apache.dubbo.remoting.buffer.AbstractChannelBuffer
+                    具体实现: org.apache.dubbo.remoting.buffer.ByteBufferBackedChannelBuffer
+                             org.apache.dubbo.remoting.buffer.DynamicChannelBuffer
+                             org.apache.dubbo.remoting.buffer.HeapChannelBuffer
+
+                具体实现: org.apache.dubbo.remoting.transport.netty4.NettyBackedChannelBuffer
+                         org.apache.dubbo.remoting.transport.netty.NettyBackedChannelBuffer
+
+        Stream 相关
+
+            org.apache.dubbo.remoting.buffer.ChannelBufferInputStream
+
+            org.apache.dubbo.remoting.buffer.ChannelBufferOutputStream
+
+            org.apache.dubbo.remoting.buffer.ChannelBuffers
+                dynamicBuffer() 方法：创建 DynamicChannelBuffer 对象，初始化大小由第一个参数指定，默认为 256。
+                buffer() 方法：创建指定大小的 HeapChannelBuffer 对象。
+                wrappedBuffer() 方法：将传入的 byte[] 数字封装成 HeapChannelBuffer 对象。
+                directBuffer() 方法：创建 ByteBufferBackedChannelBuffer 对象，需要注意的是，底层的 ByteBuffer 使用的堆外内存，需要特别关注堆外内存的管理。
+                equals() 方法：用于比较两个 ChannelBuffer 是否相同，其中会逐个比较两个 ChannelBuffer 中的前 7 个可读字节，只有两者完全一致，才算两个 ChannelBuffer 相同
+                compare() 方法：用于比较两个 ChannelBuffer 的大小，会逐个比较两个 ChannelBuffer 中的全部可读字节。
+
 
 
 
