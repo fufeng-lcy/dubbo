@@ -22,24 +22,15 @@ import org.apache.dubbo.common.threadlocal.NamedInternalThreadFactory;
 import org.apache.dubbo.common.threadpool.ThreadPool;
 import org.apache.dubbo.common.threadpool.support.AbortPolicyWithReport;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
-import static org.apache.dubbo.common.constants.CommonConstants.CORE_THREADS_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_CORE_THREADS;
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_QUEUES;
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_THREADS;
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_THREAD_NAME;
-import static org.apache.dubbo.common.constants.CommonConstants.QUEUES_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.THREADS_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.THREAD_NAME_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.*;
 
 /**
  * Creates a thread pool that creates new threads as needed until limits reaches. This thread pool will not shrink
  * automatically.
+ *
+ * 与 CacheThreadPool 一样，可以指定核心线程数、最大线程数以及缓冲队列长度。区别在于，LimitedThreadPool 创建的线程池的非核心线程不会被回收。
  */
 public class LimitedThreadPool implements ThreadPool {
 

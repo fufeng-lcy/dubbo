@@ -39,6 +39,12 @@ import static org.apache.dubbo.common.constants.CommonConstants.THREAD_NAME_KEY;
  * EagerThreadPool
  * When the core threads are all in busy,
  * create new thread instead of putting task into blocking queue.
+ * <p>
+ * 在核心线程没有达到最大的情况下，不将任务放入缓存队列中，而是通过新建线程处理任务，直到达到最大线程。
+ * <p>
+ * EagerThreadPoolExecutor 覆盖了 ThreadPoolExecutor 中的两个方法：execute() 方法和 afterExecute() 方法，
+ * 具体实现如下，我们可以看到其中维护了一个 submittedTaskCount 字段（AtomicInteger 类型），
+ * 用来记录当前在线程池中的任务总数（正在线程中执行的任务数+队列中等待的任务数）。
  */
 public class EagerThreadPool implements ThreadPool {
 

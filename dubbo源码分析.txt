@@ -1042,6 +1042,18 @@
                 equals() 方法：用于比较两个 ChannelBuffer 是否相同，其中会逐个比较两个 ChannelBuffer 中的前 7 个可读字节，只有两者完全一致，才算两个 ChannelBuffer 相同
                 compare() 方法：用于比较两个 ChannelBuffer 的大小，会逐个比较两个 ChannelBuffer 中的全部可读字节。
 
+        AbstractPeer 抽象类
+
+        AbstractEndpoint 抽象类
+
+        AbstractServer 抽象类
+
+        ExecutorRepository 接口  ->  DefaultExecutorRepository 实现 (ThreadPool[spi]) -> EagerThreadPoolExecutor(TaskQueue) -> org.apache.dubbo.remoting.transport.AbstractServer
+
+
+
+
+
 
 
 

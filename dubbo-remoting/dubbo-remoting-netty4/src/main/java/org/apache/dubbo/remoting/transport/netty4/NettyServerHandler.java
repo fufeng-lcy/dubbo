@@ -42,11 +42,15 @@ public class NettyServerHandler extends ChannelDuplexHandler {
     /**
      * the cache for alive worker channel.
      * <ip:port, dubbo channel>
+     * 记录了当前 Server 创建的所有 Channel，它的功能包含连接创建（触发 channelActive() 方法）、连接断开（触发 channelInactive()方法）会操作 channels 集合进行相应的增删。
      */
     private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>();
 
     private final URL url;
 
+    /**
+     * NettyServerHandler 内几乎所有方法都会触发该 Dubbo ChannelHandler 对象。
+     */
     private final ChannelHandler handler;
 
     public NettyServerHandler(URL url, ChannelHandler handler) {
@@ -101,7 +105,10 @@ public class NettyServerHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        // 将发送的数据继续向下传递
         super.write(ctx, msg, promise);
+        // 并不影响消息的继续发送，只是触发sent()方法进行相关的处理，这也是方法
+        // 名称是动词过去式的原因，可以仔细体会一下。
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         handler.sent(channel, msg);
     }

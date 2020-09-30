@@ -32,6 +32,7 @@ public interface ThreadPool {
 
     /**
      * Thread pool
+     * {@link Adaptive} 注解修饰，动态生成的适配器类会优先根据 URL 中的 threadpool 参数选择 ThreadPool 的扩展实现。
      *
      * @param url URL contains thread parameter
      * @return thread pool
