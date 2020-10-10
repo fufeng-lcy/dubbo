@@ -17,8 +17,6 @@
  */
 package org.apche.dubbo.javassist;
 
-import javassist.util.proxy.MethodHandler;
-import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
 import javassist.util.proxy.ProxyObject;
 
