@@ -938,7 +938,7 @@
 
             DataListener：主要监听某个节点存储的数据变化。
 
-            **ChildListener：**主要监听某个 ZNode 节点下的子节点变化。
+            ChildListener：主要监听某个 ZNode 节点下的子节点变化。
 
          AbstractZookeeperClient 中维护了 stateListeners、listeners 以及 childListeners 三个集合，分别管理上述三种类型的监听器。
 
@@ -981,7 +981,7 @@
         Hessian2 序列化之后的数据可以进行自描述，不会像 Avro 那样依赖外部的 Schema 描述文件或者接口定义。
         Hessian2 可以用一个字节表示常用的基础类型，这极大缩短了序列化之后的二进制流。
         需要注意的是，在 Dubbo 中使用的 Hessian2 序列化并不是原生的 Hessian2 序列化，而是阿里修改过的 Hessian Lite，它是 Dubbo 默认使用的序列化方式。
-        其序列化之后的二进制流大小大约是 Java 序列化的 50%，序列化耗时大约是 Java 序列化的 30%，反序列化耗时大约是 Java 序列化的 20%。
+        其序列化之后的二进制流大小大约是 Java 序列化的 50%，序列化耗时大约是 Java 序列化的 30%，反序列化耗时大约是 Java 反序列化的 20%。
 
         6、Protobuf（Google Protocol Buffers）是 Google 公司开发的一套灵活、高效、自动化的、用于对结构化数据进行序列化的协议。
         但相比于常用的 JSON 格式，Protobuf 有更高的转化效率，时间效率和空间效率都是 JSON 的 5 倍左右。
@@ -1050,8 +1050,13 @@
 
         ExecutorRepository 接口  ->  DefaultExecutorRepository 实现 (ThreadPool[spi]) -> EagerThreadPoolExecutor(TaskQueue) -> org.apache.dubbo.remoting.transport.AbstractServer
 
-
-
+        dubbo 整个服务端方法执行流程如下:
+        org.apache.dubbo.remoting.transport.netty4.NettyServer doOpen() 开启服务端TCP监听
+            -> org.apache.dubbo.remoting.transport.netty4.NettyServerHandler channelRead() 读取解码后的message
+                -> org.apache.dubbo.remoting.transport.dispatcher.all.AllChannelHandler received() 处理回复客户端的消息
+                    -> org.apache.dubbo.remoting.transport.dispatcher.ChannelEventRunnable run()开启异步(通过线程池执行)处理回复消息
+                        -> org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol received() 通过不同的协议去处理回复消息，这里选择Dubbo协议分析
+                            -> org.apache.dubbo.rpc.proxy.AbstractProxyInvoker(JavassistProxyFactory、JdkProxyFactory) invoke() 通过执行器处理具体方法
 
 
 
